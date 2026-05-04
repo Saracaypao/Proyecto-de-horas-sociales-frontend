@@ -1,0 +1,69 @@
+.contenedor-cards {
+  /* Define una altura máxima para que el scroll se active */
+  max-height: 500px;
+
+  /* Activa el scroll vertical solo cuando el contenido sea mayor a la altura */
+  overflow-y: auto;
+
+  /* Evita el scroll horizontal si las cards se ajustan bien */
+  overflow-x: hidden;
+
+  /* Alinea las cards verticalmente y añade espacio entre ellas */
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  /* Padding para que las sombras de las cards no se corten */
+  padding: 10px;
+}
+
+/* Scrollbar estético para WebKit */
+.contenedor-cards::-webkit-scrollbar {
+  width: 8px;
+}
+.contenedor-cards::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 8px;
+}
+.contenedor-cards::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Firefox scrollbar más fino */
+.contenedor-cards {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,0,0,0.18) transparent;
+}
+
+/* Contenedor lateral específico para la columna de proyectos activos */
+.sidebar-projects-list {
+  /* Calculamos la altura restando el header y el título de 'Proyectos activos' */
+  height: calc(100vh - 150px);
+
+  /* Permite el scroll vertical */
+  overflow-y: auto;
+
+  /* Evita el scroll horizontal si las cards se estiran */
+  overflow-x: hidden;
+
+  /* Estilo para que la barra se vea delgada */
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e0 #f7fafc;
+
+  /* Flex para apilar las cards */
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 10px;
+}
+
+/* Personalización para navegadores Webkit (Chrome, Edge, Safari) */
+.sidebar-projects-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-projects-list::-webkit-scrollbar-thumb {
+  background-color: #cbd5e0;
+  border-radius: 10px;
+}
+
