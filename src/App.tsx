@@ -24,7 +24,7 @@ import {
   Users,
   X,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { Link, Navigate, NavLink, Route, Routes, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import InstitutionCard from './components/InstitutionCard';
@@ -734,19 +734,104 @@ function ProjectMapDetail({ project, onReset }: { project: (typeof proyectosMapa
 }
 
 function ProyectoDetallePage() {
-  const { id = proyectosMapa[0]?.id ?? 'cerro-verde' } = useParams();
-  const project = proyectosMapa.find((item) => item.id === id) ?? proyectosMapa[0];
+  const { id = '' } = useParams();
+  let project = proyectosMapa.find((item) => item.id === id);
+  if (!project) {
+    const found = instituciones.flatMap((i) => i.proyectos).find((p) => p.id === id);
+    if (found) {
+      project = { ...found, resumen: found.descripcion, personas: 3 } as any;
+    }
+  }
+  if (!project) project = proyectosMapa[0];
 
   return (
-    <div className="dashboard-grid map-layout">
-      <aside className="sidebar map-sidebar map-sidebar-detail detail-sidebar-panel">
-        <ProjectMapDetail project={project} onReset={() => window.history.back()} />
-      </aside>
+    <div className="detail-page wide-page">
+      <BackLink to="/proyectos" label="Volver a proyectos" />
 
-      <section className="map-panel">
-        {/* placeholder map panel to preserve same two-column layout */}
-        <div style={{ height: '100%', background: 'transparent' }} />
-      </section>
+      <div className="project-detail-hero">
+        <img src={`/images/${project.id}.jpg`} alt={project.titulo} onError={(e) => { e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22600%22 height=%22300%22%3E%3Crect fill=%22%238db179%22 width=%22600%22 height=%22300%22/%3E%3C/svg%3E'; }} />
+        <div className="project-detail-hero-content">
+          <div className="project-detail-hero-topline">
+            <span className={`pill status ${clasificacionEstado[project.estado]}`}>{project.estado}</span>
+            <span>{project.institucion}</span>
+            <span className="dot">•</span>
+            <span>{project.ubicacion}</span>
+          </div>
+          <h1>{project.titulo}</h1>
+        </div>
+      </div>
+
+      <div className="project-detail-body">
+        <section className="detail-main">
+          <div className="detail-section">
+            <h2>About the Project</h2>
+            <p>{project.descripcion}</p>
+          </div>
+
+          <div className="detail-section">
+            <h2>Key Objectives</h2>
+            <div className="objectives-list">
+              <div className="objective-card">
+                <div className="objective-index">1</div>
+                <div>
+                  <h3>Plant 5,000 Trees</h3>
+                  <p>Focusing on native species to restore the local ecosystem.</p>
+                </div>
+              </div>
+              <div className="objective-card">
+                <div className="objective-index">2</div>
+                <div>
+                  <h3>Community Education</h3>
+                  <p>Workshops with local schools on conservation.</p>
+                </div>
+              </div>
+              <div className="objective-card">
+                <div className="objective-index">3</div>
+                <div>
+                  <h3>Soil Monitoring</h3>
+                  <p>Track pH levels, moisture, and nutrient content monthly.</p>
+                </div>
+              </div>
+              <div className="objective-card">
+                <div className="objective-index">4</div>
+                <div>
+                  <h3>Biodiversity Survey</h3>
+                  <p>Log return of insect and bird species in target zones.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <aside className="detail-sidebar">
+          <div className="detail-meta-card">
+            <h3 style={{ margin: '0 0 16px', fontSize: '1rem', fontWeight: 700 }}>Project Team</h3>
+            <div className="team-grid" style={{ gridTemplateColumns: '1fr' }}>
+              {project.equipo && project.equipo.length > 0 ? (
+                project.equipo.map((name) => (
+                  <div key={name} className="team-member-card" style={{ flexDirection: 'row', padding: '12px' }}>
+                    <div className="member-avatar" style={{ width: '40px', height: '40px' }}>
+                      {name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase()}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <h4 style={{ margin: '0 0 2px', fontSize: '0.95rem' }}>{name}</h4>
+                      <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Role here</p>
+                    </div>
+                    <button className="icon-btn" style={{ padding: 0, width: 'auto', color: '#2d63e2' }}>
+                      <ArrowRight size={18} />
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <p className="muted">No team info available</p>
+              )}
+            </div>
+            <button className="text-link" style={{ marginTop: '12px', width: '100%', textAlign: 'center' }}>
+              View Full Team Directory
+            </button>
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }
@@ -754,6 +839,23 @@ function ProyectoDetallePage() {
 function ProyectosPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const modalNuevo = searchParams.get('nuevo') === '1';
+  const [selectedFaculty, setSelectedFaculty] = useState('Todas las facultades');
+
+  const facultyToMajors: Record<string, string[]> = {
+    'Todas las facultades': [],
+    'Arquitectura e Ingeniería': ['Ingeniería', 'Arquitectura', 'Electrónica'],
+    'Ciencias sociales y humanidades': ['Sociología', 'Historia', 'Psicología'],
+    'Comunicación y mercadeo': ['Mercadeo', 'Comunicación'],
+    'Derecho': ['Derecho'],
+    'Diseño': ['Diseño Gráfico', 'Diseño'],
+    'Educación': ['Educación'],
+    'Administración': ['Administración', 'Gestión'],
+  };
+
+  const allProjects = instituciones.flatMap((institution) => institution.proyectos);
+  const filteredProjects = selectedFaculty === 'Todas las facultades'
+    ? allProjects
+    : allProjects.filter((p) => p.carreras.some((c) => facultyToMajors[selectedFaculty]?.includes(c)));
 
   return (
     <div className={`directory-page wide-page ${modalNuevo ? 'modal-open' : ''}`}>
@@ -762,16 +864,15 @@ function ProyectosPage() {
         title="Encuentra proyectos según tu carrera o colabora con otras áreas."
         description="Postúlate y participa en iniciativas de impacto social en todo El Salvador."
         action={
-          <button className="primary-btn" type="button" onClick={() => setSearchParams({ nuevo: '1' })}>
-            <Plus size={18} />
-            Crear nuevo proyecto
-          </button>
+          <button className="primary-btn rounded-icon" type="button" onClick={() => setSearchParams({ nuevo: '1' })} title="Crear nuevo proyecto">
+            <Plus size={24} />
+        </button>
         }
       />
 
       <div className="chip-row">
-        {['Todas las facultades', 'Arquitectura e Ingeniería', 'Ciencias sociales y humanidades', 'Comunicación y mercadeo', 'Derecho', 'Diseño', 'Educación', 'Administración'].map((chip, index) => (
-          <button key={chip} className={index === 0 ? 'chip active' : 'chip'} type="button">
+        {['Todas las facultades', 'Arquitectura e Ingeniería', 'Ciencias sociales y humanidades', 'Comunicación y mercadeo', 'Derecho', 'Diseño', 'Educación', 'Administración'].map((chip) => (
+          <button key={chip} className={chip === selectedFaculty ? 'chip active' : 'chip'} type="button" onClick={() => setSelectedFaculty(chip)}>
             {chip}
           </button>
         ))}
@@ -791,7 +892,7 @@ function ProyectosPage() {
           </div>
 
           <div className="project-feed">
-            {instituciones.flatMap((institution) => institution.proyectos).map((project) => (
+            {filteredProjects.map((project) => (
               <ProjectListCard key={project.id} project={project} />
             ))}
           </div>
@@ -818,9 +919,10 @@ function InstitucionDetallePage() {
   return (
     <div className="detail-page wide-page">
       <BackLink to="/instituciones" label="Volver a instituciones" />
+
       <section className="institution-hero">
         <div className="checker-bg" />
-        <div className="hero-float" />
+        {/* removed duplicate decorative float to avoid double blue shapes */}
         <div className="institution-header-row">
           <div className="floating-logo" />
           <div className="institution-meta">
@@ -840,45 +942,71 @@ function InstitucionDetallePage() {
         </div>
       </section>
 
+      {/* Tabs with local state to switch content without overlapping layout */}
+      <InstitutionTabs institution={institution} />
+    </div>
+  );
+}
+
+function InstitutionTabs({ institution }: { institution: (typeof instituciones)[number] }) {
+  const [tab, setTab] = useState<'general'|'projects'|'past'|'students'>('projects');
+
+  const proyectos = institution.proyectos ?? [];
+  const proyectosPasados = proyectos.filter((p: any) => p.estado === 'Cerrado' || p.estado === 'Pasado');
+
+  return (
+    <>
       <div className="tabs-row">
-        <button className="tab" type="button">General</button>
-        <button className="tab active" type="button">Proyectos activos</button>
-        <button className="tab" type="button">Proyectos pasados</button>
-        <button className="tab" type="button">Estudiantes</button>
+        <button className={`tab ${tab === 'general' ? 'active' : ''}`} type="button" onClick={() => setTab('general')}>General</button>
+        <button className={`tab ${tab === 'projects' ? 'active' : ''}`} type="button" onClick={() => setTab('projects')}>Proyectos activos</button>
+        <button className={`tab ${tab === 'past' ? 'active' : ''}`} type="button" onClick={() => setTab('past')}>Proyectos pasados</button>
+        <button className={`tab ${tab === 'students' ? 'active' : ''}`} type="button" onClick={() => setTab('students')}>Estudiantes</button>
       </div>
 
       <div className="institution-content">
-        <section className="projects-zone">
+        <section className="projects-zone" style={{ display: tab === 'projects' ? 'block' : 'none' }}>
           <div className="section-heading-row">
             <h2>Iniciativas actuales</h2>
             <div className="inline-tools">
-              <SearchPanel title="" placeholder={`Buscar proyectos de ${institution.sigla.split(' ')[0]}...`} compact />
+              <SearchPanel title="" placeholder={`Buscar proyectos de ${institution.sigla?.split(' ')[0] ?? ''}...`} compact />
               <button className="secondary-btn" type="button">Filtrar</button>
             </div>
           </div>
 
           <div className="institution-project-grid">
-            {institution.proyectos.map((project) => (
+            {proyectos.length ? proyectos.map((project: any) => (
               <ProjectCompactCard key={project.id} project={project} />
-            ))}
+            )) : <p>No hay proyectos activos.</p>}
           </div>
         </section>
 
-        <aside className="side-panel">
-          <div className="panel-card">
-            <h3>Contexto rápido</h3>
-            <p className="summary-copy">
-              Vista centralizada de programas universitarios, capacidad de asignación y colaboraciones activas.
-            </p>
-            <div className="stack-info">
-              <InfoRow label="Facultades" value="12 departamentos involucrados" />
-              <InfoRow label="Estudiantes" value="156 asignados en campo" />
-              <InfoRow label="Enfoque" value="Comunidad, investigación y servicio" />
-            </div>
+        <section className="projects-zone" style={{ display: tab === 'past' ? 'block' : 'none' }}>
+          <div className="section-heading-row">
+            <h2>Proyectos pasados</h2>
           </div>
-        </aside>
+          <div className="institution-project-grid">
+            {proyectosPasados.length ? proyectosPasados.map((project: any) => (
+              <ProjectCompactCard key={project.id} project={project} />
+            )) : <p>No hay proyectos pasados.</p>}
+          </div>
+        </section>
+
+        <section style={{ display: tab === 'general' ? 'block' : 'none' }}>
+          <div className="section-heading-row">
+            <h2>General</h2>
+          </div>
+          <p>{institution.descripcion}</p>
+        </section>
+
+        <section style={{ display: tab === 'students' ? 'block' : 'none' }}>
+          <div className="section-heading-row">
+            <h2>Estudiantes</h2>
+          </div>
+          <p>Listado de estudiantes asignados (si aplica).</p>
+        </section>
+
       </div>
-    </div>
+    </>
   );
 }
 
@@ -894,13 +1022,31 @@ function SearchPanel({ title, placeholder, compact = false }: { title: string; p
   );
 }
 
-function FilterGroup({ title, options }: { title: string; options: string[] }) {
+function FilterGroup({ title, options, selected, onChange }: { title: string; options: string[]; selected?: string; onChange?: (opt: string) => void }) {
+  const [localSelected, setLocalSelected] = useState<string | null>(selected ?? null);
+
+  useEffect(() => {
+    if (selected !== undefined) setLocalSelected(selected);
+  }, [selected]);
+
+  function handleSelect(opt: string) {
+    if (onChange) onChange(opt);
+    else setLocalSelected(opt);
+  }
+
+  const current = selected !== undefined ? selected : localSelected;
+
   return (
     <div className="filter-group">
       <h3>{title}</h3>
       <div className="filter-options">
         {options.map((option) => (
-          <button key={option} className="filter-option" type="button">
+          <button
+            key={option}
+            className={`filter-option ${current === option ? 'active' : ''}`}
+            type="button"
+            onClick={() => handleSelect(option)}
+          >
             {option}
           </button>
         ))}
@@ -942,18 +1088,18 @@ function EstudiantesPage() {
                     {project.facultad} <span className="dot">•</span> {project.ubicacion}
                   </p>
                 </div>
-                <button className="secondary-btn project-link-btn" type="button">
-                  Ver detalles del proyecto
+                <Link to={`/proyectos/${project.titulo.toLowerCase().replace(/\s+/g, '-')}`} className="text-link" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  View Project Details
                   <ArrowRight size={18} />
-                </button>
+                </Link>
               </div>
 
-              <div className="team-label">Integrantes del equipo ({project.estudiantes.length})</div>
-              <div className="student-grid">
+              <div className="team-label">PROJECT TEAM MEMBERS ({project.estudiantes.length})</div>
+              <div className="student-grid-horizontal">
                 {project.estudiantes.map((student) => (
-                  <div key={student.nombre} className="student-card">
+                  <div key={student.nombre} className="student-card-horizontal">
                     <div className="student-avatar">{student.avatar}</div>
-                    <div>
+                    <div className="student-info">
                       <h4>{student.nombre}</h4>
                       <p className="role-link">{student.cargo}</p>
                       <span className="muted small">{student.carrera}</span>
@@ -967,7 +1113,7 @@ function EstudiantesPage() {
           <div className="center-actions">
             <button className="secondary-btn load-more-btn" type="button">
               <span className="spin-dot" />
-              Cargar más proyectos
+              Load More Projects
             </button>
           </div>
         </section>
