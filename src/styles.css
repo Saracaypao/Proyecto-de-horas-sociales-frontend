@@ -744,8 +744,8 @@
 }
 
 .map-layout {
-  display: grid;
-  grid-template-columns: minmax(500px, 500px) minmax(0, 1fr);
+  display: flex;
+  flex-direction: row;
   gap: 0;
   align-items: stretch;
   height: calc(100vh - 74px);
@@ -755,12 +755,14 @@
 
 .detail-sidebar-panel {
   width: 500px;
+  min-width: 500px;
   max-width: 500px;
   height: 100%;
   min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .sidebar,
@@ -781,6 +783,9 @@
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
+  flex-shrink: 0;
+  width: 500px;
+  min-width: 500px;
 }
 
 .section-header,
@@ -1054,6 +1059,13 @@
   flex-shrink: 0;
 }
 
+.project-detail-card-single {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 0;
+}
+
 .project-detail-scroll-area {
   overflow-y: auto;
   flex: 1;
@@ -1100,6 +1112,68 @@
   border-radius: 999px;
   border: 2px solid transparent;
   background-clip: content-box;
+}
+
+/* Detail body styles for the sidebar detail view */
+.detail-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0;
+}
+
+.inst-name {
+  color: #2d63e2;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  display: block;
+}
+
+.detail-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #1c2433;
+  margin: 8px 0 0 0;
+  line-height: 1.2;
+}
+
+.detail-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.detail-meta p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+  font-size: 14px;
+  margin: 0;
+}
+
+.detail-description {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.detail-description h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1c2433;
+  margin: 0 0 6px 0;
+}
+
+.detail-description p {
+  color: #475569;
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
 }
 
 .detail-image-container {
@@ -1398,8 +1472,8 @@
 
 .project-detail-hero {
   position: relative;
-  height: 182px;
-  border-radius: 22px;
+  height: 120px;
+  border-radius: 16px;
   overflow: hidden;
   background: linear-gradient(135deg, #45755f 0%, #8db179 45%, #d1d9c7 100%);
 }
@@ -1689,10 +1763,16 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  flex-grow: 1;
+  min-width: 0;
+  position: relative;
+  height: 100%;
+  overflow: hidden;
 }
 
 .map-scene {
   min-height: 760px;
+  flex: 1;
   position: relative;
   overflow: hidden;
   border-radius: 28px;
@@ -1723,6 +1803,7 @@
 
 .map-toolbar {
   padding: 0 10px;
+  flex-shrink: 0;
 }
 
 .legend-pill {

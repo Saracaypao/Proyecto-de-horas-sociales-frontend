@@ -670,29 +670,28 @@ function ProjectMapDetail({ project, onReset }: { project: (typeof proyectosMapa
   const projectImage = project.imagen ?? '/images/ProjectsDirectoryDetailedView.jpeg';
 
   return (
-    <div className="project-map-detail animate-fade-in">
-      <button onClick={onReset} className="back-link" type="button">
-        <ChevronLeft size={16} />
-        <span>Volver a la vista general</span>
-      </button>
+    <div className="projects-list-container animate-fade-in">
+      <div className="section-header">
+        <button onClick={onReset} className="back-link" type="button">
+          <ChevronLeft size={16} />
+          <span>Volver</span>
+        </button>
+      </div>
 
-      <div className="project-detail-scroll-area">
-        <div className="project-detail-content">
+      <div className="stack-list cards-scroll sidebar-projects-list">
+        <div className="project-detail-card-single">
           <div className="project-detail-hero">
-            <div className="project-detail-image">
-              <img src={projectImage} alt={project.titulo} className="project-main-img" />
-            </div>
-            <span className="project-detail-badge">Activo</span>
+            <img src={projectImage} alt={project.titulo} className="project-main-img" />
           </div>
 
-          <div className="project-detail-body">
-            <span className="institution-tag">UNIVERSIDAD DE EL SALVADOR</span>
-            <h2 className="project-main-title">{project.titulo}</h2>
+          <div className="detail-body">
+            <span className="inst-name">UNIVERSIDAD DE EL SALVADOR</span>
+            <h2 className="detail-title">{project.titulo}</h2>
 
-            <div className="detail-meta-list">
-              <div className="meta-item"><MapPinned size={14} /> {project.ubicacion}</div>
-              <div className="meta-item"><CalendarDays size={14} /> Ene 2024 - Dic 2024</div>
-              <div className="meta-item"><Users size={14} /> {project.personas} estudiantes asignados</div>
+            <div className="detail-meta">
+              <p><MapPinned size={14} /> {project.ubicacion}</p>
+              <p><CalendarDays size={14} /> Ene 2024 - Dic 2024</p>
+              <p><Users size={14} /> {project.personas} estudiantes asignados</p>
             </div>
 
             <div className="detail-description">
@@ -700,13 +699,12 @@ function ProjectMapDetail({ project, onReset }: { project: (typeof proyectosMapa
               <p>{project.resumen}</p>
             </div>
 
-            <div className="project-team-inline">
+            <div className="team-section">
               <div className="team-header">
                 <h3>Equipo del proyecto</h3>
                 <button className="link-btn" type="button">Ver todo</button>
               </div>
-
-              <div className="team-block">
+              <div className="team-list">
                 {project.equipo.map((member, index) => {
                   const initials = member
                     .split(' ')
