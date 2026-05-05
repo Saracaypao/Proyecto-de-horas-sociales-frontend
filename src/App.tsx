@@ -705,40 +705,20 @@ function MapaVistaPage() {
           </button>
         </div>
         <div className={`map-scene ${mostrarDetalle ? 'focused' : ''}`} style={{ transformOrigin: focoMapa }}>
-          {marcadoresMapa.map((marker) => {
-            const activo = marker.id === proyectoSeleccionado.id;
-            return (
-              <div
-                className={`map-marker ${activo ? 'active' : ''}`}
-                key={marker.label}
-                style={{ top: `${marker.top}%`, left: `${marker.left}%`, transform: activo ? 'translate(-50%, -50%) scale(1.08)' : 'translate(-50%, -50%)' }}
-              >
-                <div className="map-department-label">
-                  <div className="map-marker-title">{marker.label}</div>
-                  <div className="label-counts">
-                    <span className="count-pill-blue">
-                      <Users size={13} /> {marker.hombres}
-                    </span>
-                    <span className="count-pill-pink">
-                      <Users size={13} /> {marker.mujeres}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-          <div className="map-zoom">
-            <button type="button">+</button>
-            <button type="button">−</button>
-          </div>
+          {/* Google Maps iframe centered on El Salvador; simple embed without markers */}
+          <iframe
+            className="map-iframe"
+            title="Google Maps - El Salvador"
+            src={`https://www.google.com/maps?q=El%20Salvador&output=embed`}
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+          />
           <div className="map-reset-floating">
             <button className="secondary-btn" type="button" onClick={() => setSearchParams({})}>
               <ChevronLeft size={18} />
               Restablecer mapa
             </button>
           </div>
-          <div className="map-overlay-note">Desplaza la vista con el detalle seleccionado para acercar la zona del proyecto.</div>
-          <div className="map-focus-indicator" style={{ inset: 'auto auto 22% 44%' }} />
         </div>
       </section>
     </div>
