@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { Link, Navigate, NavLink, Route, Routes, useLocation, useParams, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, NavLink, Route, Routes, useLocation, useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import InstitutionCard from './components/InstitutionCard';
 
 type EstadoProyecto = 'Activo' | 'En planificación' | 'En convocatoria' | 'Cerrado';
@@ -477,11 +477,11 @@ const clasificacionEstado: Record<EstadoProyecto, string> = {
 
 function App() {
   const location = useLocation();
-  const activePage = location.pathname.split('/')[1] || 'mapa';
+  const activePage = location.pathname.split('/')[1] || 'login';
 
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/mapa" replace />} />
+      <Route path="/" element={<Navigate to="/login/estudiante" replace />} />
       <Route path="/login/docente" element={<LoginPage tipo="docente" />} />
       <Route path="/login/estudiante" element={<LoginPage tipo="estudiante" />} />
       <Route path="/*" element={<Shell activePage={activePage} />} />
@@ -509,6 +509,14 @@ function Shell({ activePage }: { activePage: string }) {
 }
 
 function Header({ activePage }: { activePage: string }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    setMenuOpen(false);
+    navigate('/login/estudiante');
+  };
+
   return (
     <header className="topbar">
       <div className="brand">
@@ -531,110 +539,86 @@ function Header({ activePage }: { activePage: string }) {
       </nav>
 
       <div className="topbar-actions">
-        <label className="searchbox">
-          <Search size={18} />
-          <input placeholder="Buscar..." aria-label="Buscar" />
-        </label>
-        <button className="avatar-button" aria-label="Abrir menú de cuenta">
-          <span>AM</span>
-        </button>
+        <div className="avatar-menu">
+          <button className="avatar-button" aria-label="Abrir menú de cuenta" onClick={() => setMenuOpen(!menuOpen)}>
+            <span>AM</span>
+          </button>
+          {menuOpen && (
+            <div className="avatar-dropdown">
+              <button className="dropdown-item logout-item" type="button" onClick={handleLogout}>
+                <LogOut size={18} />
+                <span>Cerrar sesión</span>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );
 }
 
 function LoginPage({ tipo }: { tipo: 'docente' | 'estudiante' }) {
+  const navigate = useNavigate();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [remember, setRemember] = useState(false);
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (email && password) {
+      navigate('/mapa');
+    }
+  };
+
   const isDocente = tipo === 'docente';
+  const title = isDocente ? 'Faculty & Staff Portal' : 'Bienvenido';
+  const subtitle = isDocente ? 'Secure access for university employees.' : 'Por favor ingresa tus credenciales para continuar.';
+  const icon = isDocente ? <Building2 size={40} /> : <GraduationCap size={40} />;
+  const buttonText = 'Iniciar sesión';
+  const emailLabel = isDocente ? 'Institutional Email' : 'Student Email or ID';
+  const emailPlaceholder = isDocente ? 'e.g. jdoe@uni.edu.sv' : 'e.g. student@uni.edu.sv';
 
-  if (isDocente) {
-    // Diseño para Docentes: Tarjeta centrada
-    return (
-      <div className="login-page employee-login">
-        <div className="login-shell">
-          <div className="login-card card-type-employee">
-            <div className="login-strip" />
-            <div className="login-icon">
-              <Building2 size={40} />
-            </div>
-            <h1>Faculty & Staff Portal</h1>
-            <p>Secure access for university employees.</p>
-
-            <form className="login-form">
-              <Field 
-                label="Institutional Email" 
-                placeholder="e.g. jdoe@uni.edu.sv" 
-                icon={<Mail size={18} />} 
-              />
-              <Field 
-                label="Password" 
-                placeholder="••••••••" 
-                icon={<Lock size={18} />} 
-                suffix={<Eye size={18} />} 
-                type="password" 
-              />
-              <label className="remember-row">
-                <span className="check" />
-                <span>Remember my device</span>
-              </label>
-              <button className="primary-btn large" type="button">
-                <Layers3 size={18} />
-                Login with Microsoft Account
-              </button>
-            </form>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Diseño para Estudiantes: Dos columnas
   return (
-    <div className="login-page student-login">
-      <div className="login-split-container">
-        <aside className="login-aside">
-          <div className="login-aside-badge">Student</div>
-          <h2 className="login-aside-title">Connect with your campus community</h2>
-          <p className="login-aside-text">Join initiatives that make a real impact in El Salvador</p>
-        </aside>
+    <div className="login-page employee-login">
+      <div className="login-shell">
+        <div className="login-card card-type-employee">
+          <div className="login-strip" />
+          <div className="login-icon">{icon}</div>
+          <h1>{title}</h1>
+          <p>{subtitle}</p>
 
-        <main className="login-main">
-          <div className="login-card card-type-student">
-            <div className="login-icon">
-              <GraduationCap size={40} />
-            </div>
-            <h1>Welcome back</h1>
-            <p>Please enter your student credentials to continue.</p>
-
-            <form className="login-form">
-              <Field 
-                label="Student Email or ID" 
-                placeholder="e.g. student@uni.edu.sv" 
-                icon={<Mail size={18} />} 
+          <form className="login-form" onSubmit={handleLogin}>
+            <Field
+              label={emailLabel}
+              placeholder={emailPlaceholder}
+              icon={<Mail size={18} />}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <Field
+              label="Password"
+              placeholder="••••••••"
+              icon={<Lock size={18} />}
+              suffix={<Eye size={18} />}
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <label className="remember-row">
+              <input
+                type="checkbox"
+                className="check"
+                checked={remember}
+                onChange={(e) => setRemember(e.target.checked)}
               />
-              <Field 
-                label="Password" 
-                placeholder="••••••••" 
-                icon={<Lock size={18} />} 
-                suffix={<Eye size={18} />} 
-                type="password" 
-              />
-              <button className="primary-btn large" type="button">
-                Sign In
-              </button>
-
-              <div className="login-divider">OR CONTINUE WITH</div>
-
-              <button className="microsoft-btn" type="button">
-                <Layers3 size={18} />
-                University Microsoft Account
-              </button>
-            </form>
-
-            <p className="login-footer-text">
-              Don't have an account? <Link to="#" className="text-link">Contact Admissions</Link>
-            </p>
-          </div>
-        </main>
+              <span>Remember my device</span>
+            </label>
+            <button className="primary-btn large" type="submit">
+              {isDocente && <Layers3 size={18} />}
+              {buttonText}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );
@@ -645,7 +629,6 @@ function MapaVistaPage() {
   const proyectoId = searchParams.get('proyecto') ?? 'cerro-verde';
   const proyectoSeleccionado = proyectosMapa.find((item) => item.id === proyectoId) ?? proyectosMapa[0];
   const mostrarDetalle = searchParams.has('proyecto');
-
   const focoMapa = proyectoSeleccionado.id === 'cerro-verde' ? '56% 48%' : proyectoSeleccionado.id === 'alfabetizacion-digital' ? '67% 40%' : proyectoSeleccionado.id === 'paneles-solares' ? '82% 68%' : '47% 55%';
 
   return (
@@ -900,6 +883,10 @@ function ProyectosPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const modalNuevo = searchParams.get('nuevo') === '1';
   const [selectedFaculty, setSelectedFaculty] = useState('Todas las facultades');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('Todos');
+  const [selectedLocation, setSelectedLocation] = useState('Todas');
+  const [sortBy, setSortBy] = useState<'recentes' | 'titulo' | 'ubicacion'>('recentes');
 
   const facultyToMajors: Record<string, string[]> = {
     'Todas las facultades': [],
@@ -913,9 +900,20 @@ function ProyectosPage() {
   };
 
   const allProjects = instituciones.flatMap((institution) => institution.proyectos);
-  const filteredProjects = selectedFaculty === 'Todas las facultades'
-    ? allProjects
-    : allProjects.filter((p) => p.carreras.some((c) => facultyToMajors[selectedFaculty]?.includes(c)));
+  const filteredProjects = allProjects
+    .filter((project) => {
+      const query = searchQuery.trim().toLowerCase();
+      const matchesQuery = !query || [project.titulo, project.institucion, project.ubicacion, project.descripcion, project.carreras.join(' ')].some((value) => value.toLowerCase().includes(query));
+      const matchesFaculty = selectedFaculty === 'Todas las facultades' || project.carreras.some((career) => facultyToMajors[selectedFaculty]?.includes(career));
+      const matchesStatus = selectedStatus === 'Todos' || project.estado === selectedStatus;
+      const matchesLocation = selectedLocation === 'Todas' || project.ubicacion.toLowerCase().includes(selectedLocation.toLowerCase());
+      return matchesQuery && matchesFaculty && matchesStatus && matchesLocation;
+    })
+    .sort((left, right) => {
+      if (sortBy === 'titulo') return left.titulo.localeCompare(right.titulo);
+      if (sortBy === 'ubicacion') return left.ubicacion.localeCompare(right.ubicacion);
+      return right.id.localeCompare(left.id);
+    });
 
   return (
     <div className={`directory-page wide-page ${modalNuevo ? 'modal-open' : ''}`}>
@@ -940,15 +938,17 @@ function ProyectosPage() {
 
       <div className="content-split">
         <aside className="filter-rail">
-          <SearchPanel title="Búsqueda" placeholder="Palabras clave..." />
-          <FilterGroup title="Estado" options={['En convocatoria', 'Activo', 'Cerrado']} />
-          <FilterGroup title="Ubicación" options={['San Salvador', 'Santa Ana', 'San Miguel', 'La Libertad', 'Chalatenango']} />
+          <SearchPanel title="Búsqueda" placeholder="Palabras clave..." value={searchQuery} onChange={setSearchQuery} />
+          <FilterGroup title="Estado" options={['Todos', 'En convocatoria', 'Activo', 'En planificación', 'Cerrado']} selected={selectedStatus} onChange={setSelectedStatus} />
+          <FilterGroup title="Ubicación" options={['Todas', 'San Salvador', 'Santa Ana', 'San Miguel', 'La Libertad', 'Chalatenango']} selected={selectedLocation} onChange={setSelectedLocation} />
         </aside>
 
         <section className="list-panel">
           <div className="list-meta">
-            <span>Mostrando <strong>124</strong> proyectos</span>
-            <span>Ordenar por: <strong>Más recientes</strong></span>
+            <span>Mostrando <strong>{filteredProjects.length}</strong> proyectos</span>
+            <button className="link-button text-link" type="button" onClick={() => setSortBy(sortBy === 'recentes' ? 'titulo' : sortBy === 'titulo' ? 'ubicacion' : 'recentes')}>
+              Ordenar por: <strong>{sortBy === 'recentes' ? 'Más recientes' : sortBy === 'titulo' ? 'Título' : 'Ubicación'}</strong>
+            </button>
           </div>
 
           <div className="project-feed">
@@ -1010,9 +1010,19 @@ function InstitucionDetallePage() {
 
 function InstitutionTabs({ institution }: { institution: (typeof instituciones)[number] }) {
   const [tab, setTab] = useState<'general'|'projects'|'past'|'students'>('projects');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('Todos');
 
   const proyectos = institution.proyectos ?? [];
-  const proyectosPasados = proyectos.filter((p: any) => p.estado === 'Cerrado' || p.estado === 'Pasado');
+  const matchProject = (project: (typeof proyectos)[number]) => {
+    const query = searchQuery.trim().toLowerCase();
+    const matchesQuery = !query || [project.titulo, project.ubicacion, project.descripcion, project.carreras.join(' ')].some((value) => value.toLowerCase().includes(query));
+    const matchesStatus = statusFilter === 'Todos' || project.estado === statusFilter;
+    return matchesQuery && matchesStatus;
+  };
+
+  const proyectosActivos = proyectos.filter((project) => project.estado !== 'Cerrado').filter(matchProject);
+  const proyectosPasados = proyectos.filter((project) => project.estado === 'Cerrado').filter(matchProject);
 
   return (
     <>
@@ -1028,13 +1038,15 @@ function InstitutionTabs({ institution }: { institution: (typeof instituciones)[
           <div className="section-heading-row">
             <h2>Iniciativas actuales</h2>
             <div className="inline-tools">
-              <SearchPanel title="" placeholder={`Buscar proyectos de ${institution.sigla?.split(' ')[0] ?? ''}...`} compact />
-              <button className="secondary-btn" type="button">Filtrar</button>
+              <SearchPanel title="" placeholder={`Buscar proyectos de ${institution.sigla?.split(' ')[0] ?? ''}...`} compact value={searchQuery} onChange={setSearchQuery} />
+              <button className="secondary-btn" type="button" onClick={() => setStatusFilter((current) => (current === 'Todos' ? 'Activo' : current === 'Activo' ? 'En convocatoria' : current === 'En convocatoria' ? 'Cerrado' : 'Todos'))}>
+                Filtrar
+              </button>
             </div>
           </div>
 
           <div className="institution-project-grid">
-            {proyectos.length ? proyectos.map((project: any) => (
+            {proyectosActivos.length ? proyectosActivos.map((project: any) => (
               <ProjectCompactCard key={project.id} project={project} />
             )) : <p>No hay proyectos activos.</p>}
           </div>
@@ -1070,13 +1082,30 @@ function InstitutionTabs({ institution }: { institution: (typeof instituciones)[
   );
 }
 
-function SearchPanel({ title, placeholder, compact = false }: { title: string; placeholder: string; compact?: boolean }) {
+function SearchPanel({
+  title,
+  placeholder,
+  compact = false,
+  value,
+  onChange,
+}: { title: string; placeholder: string; compact?: boolean; value?: string; onChange?: (value: string) => void }) {
+  const [localValue, setLocalValue] = useState('');
+  const currentValue = value !== undefined ? value : localValue;
+
   return (
     <div className={`search-panel ${compact ? 'compact' : ''}`}>
       {title ? <h3>{title}</h3> : null}
       <div className="search-field">
         <Search size={16} />
-        <input type="text" placeholder={placeholder} />
+        <input
+          type="text"
+          placeholder={placeholder}
+          value={currentValue}
+          onChange={(event) => {
+            if (value === undefined) setLocalValue(event.target.value);
+            if (onChange) onChange(event.target.value);
+          }}
+        />
       </div>
     </div>
   );
@@ -1116,14 +1145,22 @@ function FilterGroup({ title, options, selected, onChange }: { title: string; op
 }
 
 function EstudiantesPage() {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [facultyFilter, setFacultyFilter] = useState('Todas');
+  const [locationFilter, setLocationFilter] = useState('Todas');
+
+  const filteredProjects = proyectosEstudiantes.filter((project) => {
+    const query = searchQuery.trim().toLowerCase();
+    const matchesQuery = !query || [project.titulo, project.facultad, project.ubicacion, ...project.estudiantes.map((student) => `${student.nombre} ${student.carrera} ${student.cargo}`)].some((value) => value.toLowerCase().includes(query));
+    const matchesFaculty = facultyFilter === 'Todas' || project.facultad === facultyFilter;
+    const matchesLocation = locationFilter === 'Todas' || project.ubicacion === locationFilter;
+    return matchesQuery && matchesFaculty && matchesLocation;
+  });
+
   return (
     <div className="students-page wide-page">
       <div className="students-topline">
         <span className="eyebrow-tag">Universidad Centroamericana (UCA)</span>
-        <button className="secondary-btn logout-btn" type="button">
-          <LogOut size={18} />
-          Cerrar sesión
-        </button>
       </div>
       <PageHero
         title="Estudiantes por proyecto"
@@ -1132,13 +1169,13 @@ function EstudiantesPage() {
 
       <div className="content-split students-layout">
         <aside className="filter-rail">
-          <SearchPanel title="Búsqueda" placeholder="Estudiante o proyecto..." />
-          <FilterGroup title="Filtrar por facultad" options={['Arquitectura e Ingeniería', 'Ciencias sociales y humanidades', 'Comunicación y mercadeo', 'Derecho', 'Diseño', 'Educación', 'Administración y Economía']} />
-          <FilterGroup title="Ubicación del proyecto" options={['San Salvador', 'Chalatenango', 'Santa Tecla', 'San Miguel']} />
+          <SearchPanel title="Búsqueda" placeholder="Estudiante o proyecto..." value={searchQuery} onChange={setSearchQuery} />
+          <FilterGroup title="Filtrar por facultad" options={['Todas', 'Arquitectura e Ingeniería', 'Ciencias sociales y humanidades', 'Comunicación y mercadeo', 'Derecho', 'Diseño', 'Educación', 'Administración y Economía']} selected={facultyFilter} onChange={setFacultyFilter} />
+          <FilterGroup title="Ubicación del proyecto" options={['Todas', 'San Salvador', 'Chalatenango', 'Santa Tecla', 'San Miguel']} selected={locationFilter} onChange={setLocationFilter} />
         </aside>
 
         <section className="list-panel project-team-feed">
-          {proyectosEstudiantes.map((project) => (
+          {filteredProjects.map((project) => (
             <article className="student-project-card" key={project.titulo}>
               <div className="student-project-header">
                 <div>
@@ -1184,6 +1221,8 @@ function EstudiantesPage() {
 
 function InstitucionesPage() {
   const [activeFilter, setActiveFilter] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'nombre' | 'proyectos'>('nombre');
   const categorias = ['Todos', 'Universidades Públicas', 'Universidades Privadas', 'Escuelas Técnicas', 'Institutos Especializados'];
   // Imágenes locales para rotar en las cards
   const institutionImages = [
@@ -1198,6 +1237,20 @@ function InstitucionesPage() {
     'StudentProjectDetail.jpeg',
     'InstitutionDetailView.jpeg',
   ];
+
+  const filteredInstitutions = instituciones.filter((inst) => {
+    const query = searchQuery.trim().toLowerCase();
+    const matchesQuery = !query || [inst.nombre, inst.ubicacion, inst.descripcion, inst.tipo ?? ''].some((value) => value.toLowerCase().includes(query));
+    const matchesCategory = categorias[activeFilter] === 'Todos'
+      || (categorias[activeFilter] === 'Universidades Públicas' && (inst.tipo ?? '').toLowerCase().includes('public'))
+      || (categorias[activeFilter] === 'Universidades Privadas' && (inst.tipo ?? '').toLowerCase().includes('private'))
+      || (categorias[activeFilter] === 'Escuelas Técnicas' && (inst.tipo ?? '').toLowerCase().includes('technical'))
+      || (categorias[activeFilter] === 'Institutos Especializados' && (inst.tipo ?? '').toLowerCase().includes('institute'));
+    return matchesQuery && matchesCategory;
+  }).sort((left, right) => {
+    if (sortBy === 'proyectos') return right.proyectos.length - left.proyectos.length;
+    return left.nombre.localeCompare(right.nombre);
+  });
 
   return (
     <div className="directory-page wide-page">
@@ -1214,15 +1267,15 @@ function InstitucionesPage() {
         <div className="actions-section">
           <div className="search-wrapper">
             <Search size={18} className="search-icon-inside" />
-            <input type="text" placeholder="Buscar instituciones..." />
+            <input type="text" placeholder="Buscar instituciones..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
           </div>
-          <button className="filter-action-btn">
+          <button className="filter-action-btn" type="button" onClick={() => setActiveFilter((current) => (current + 1) % categorias.length)}>
             <Filter size={16} />
             <span>Filtrar</span>
           </button>
-          <button className="filter-action-btn">
+          <button className="filter-action-btn" type="button" onClick={() => setSortBy((current) => (current === 'nombre' ? 'proyectos' : 'nombre'))}>
             <SlidersHorizontal size={16} />
-            <span>Ordenar</span>
+            <span>{sortBy === 'nombre' ? 'Ordenar' : 'Más proyectos'}</span>
           </button>
         </div>
       </div>
@@ -1234,6 +1287,7 @@ function InstitucionesPage() {
             key={cat}
             className={`filter-pill ${index === activeFilter ? 'active' : ''}`}
             onClick={() => setActiveFilter(index)}
+            type="button"
           >
             {cat}
           </button>
@@ -1242,7 +1296,7 @@ function InstitucionesPage() {
 
       {/* Grid de Cards */}
       <div className="institution-grid">
-        {instituciones.map((inst, i) => {
+        {filteredInstitutions.map((inst, i) => {
           const imageSrc = `/images/${institutionImages[i % institutionImages.length]}`;
           return (
             <Link key={inst.id} to={`/instituciones/${inst.id}`} className="institution-card-link">
@@ -1387,6 +1441,8 @@ function Field({
   suffix,
   type = 'text',
   textarea = false,
+  value,
+  onChange,
 }: {
   label: string;
   placeholder: string;
@@ -1394,13 +1450,15 @@ function Field({
   suffix?: ReactNode;
   type?: string;
   textarea?: boolean;
+  value?: string;
+  onChange?: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
 }) {
   return (
     <label className="field">
       <span>{label}</span>
       <div className="field-input">
         {icon ? <span className="field-icon">{icon}</span> : null}
-        {textarea ? <textarea placeholder={placeholder} rows={5} /> : <input type={type} placeholder={placeholder} />}
+        {textarea ? <textarea placeholder={placeholder} rows={5} value={value} onChange={onChange} /> : <input type={type} placeholder={placeholder} value={value} onChange={onChange} />}
         {suffix ? <span className="field-suffix">{suffix}</span> : null}
       </div>
     </label>
