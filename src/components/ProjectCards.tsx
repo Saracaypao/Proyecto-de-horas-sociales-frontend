@@ -5,7 +5,18 @@ import { clasificacionEstado } from '../data/proyectos';
 import { AvatarGroup } from './ui';
 
 // ─── ProjectListCard ──────────────────────────────────────────────────────────
-export function ProjectListCard({ project }: { project: Proyecto }) {
+export function ProjectListCard({
+  project,
+  onEnroll,
+}: {
+  project: Proyecto;
+  onEnroll?: (project: Proyecto) => void;
+}) {
+  const cuposMaximos = 5;
+  const cuposOcupados = Math.min(project.equipo.length, cuposMaximos);
+  const cuposDisponibles = Math.max(cuposMaximos - cuposOcupados, 0);
+  const tieneCupos = cuposDisponibles > 0;
+
   return (
     <article className="project-list-card">
       <div className="project-list-main">
@@ -19,20 +30,24 @@ export function ProjectListCard({ project }: { project: Proyecto }) {
         <p className="summary-copy">{project.descripcion}</p>
         <div className="majors-row">
           {project.carreras.map((major) => (
-            <span key={major} className="major-pill">{major}</span>
+            <span key={major} className="major-pill">
+              {major}
+            </span>
           ))}
         </div>
       </div>
       <div className="project-list-stats">
         <div>
-          <span>Fecha límite</span>
-          <strong>{project.fechaLimite ?? '15 oct 2024'}</strong>
+          <span>Cupos</span>
+          <strong>{`${cuposOcupados} de ${cuposMaximos}`}</strong>
         </div>
-        <div>
-          <span>Cupos disponibles</span>
-          <strong>{project.cupos ?? '0 / 5'}</strong>
-        </div>
-        <div className="closed-box">Inscripciones cerradas</div>
+        {tieneCupos ? (
+          <button className="primary-btn project-enroll-btn" type="button" onClick={() => onEnroll?.(project)}>
+            Inscribir estudiante
+          </button>
+        ) : (
+          <div className="closed-box project-full-box">Cupos llenos</div>
+        )}
         <Link className="text-link project-details-link" to={`/proyectos/${project.id}`}>
           Ver detalles
         </Link>

@@ -162,6 +162,16 @@ export const instituciones: Institucion[] = [
         descripcion: 'Apoyo a comerciantes para migrar sus ventas a plataformas digitales y redes sociales.',
         equipo: ['Camila Vargas', 'Andrés Morales', 'Luis Méndez'],
       },
+      {
+        id: 'salud-mental-comunitaria',
+        institucion: 'UNIVERSIDAD CENTROAMERICANA (UCA)',
+        titulo: 'Salud mental comunitaria en barrios urbanos',
+        ubicacion: 'San Salvador, El Salvador',
+        estado: 'Cerrado',
+        carreras: ['Psicología', 'Enfermería', 'Sociología'],
+        descripcion: 'Brigadas psicosociales y acompañamiento comunitario para familias en zonas urbanas vulnerables.',
+        equipo: ['Laura Castillo', 'José Martínez', 'Mariana López', 'Kevin Reyes', 'Elena Pérez'],
+      },
     ],
   },
   {

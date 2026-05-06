@@ -1,6 +1,7 @@
 import { ArrowRight, MapPinned, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
+import InscribirEstudianteModal from '../components/InscribirEstudianteModal';
 import CreateProjectModal from '../components/CreateProjectModal';
 import { ProjectListCard } from '../components/ProjectCards';
 import { BackLink, FilterGroup, PageHero, SearchPanel } from '../components/ui';
@@ -11,6 +12,10 @@ import { clasificacionEstado, proyectosMapa } from '../data/proyectos';
 export function ProyectosPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const modalNuevo = searchParams.get('nuevo') === '1';
+  const [projectToEnroll, setProjectToEnroll] = useState<{
+    id: string;
+    titulo: string;
+  } | null>(null);
   const [selectedFaculty, setSelectedFaculty] = useState('Todas las facultades');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('Todos');
@@ -113,7 +118,7 @@ export function ProyectosPage() {
 
           <div className="project-feed">
             {filteredProjects.map((project) => (
-              <ProjectListCard key={project.id} project={project} />
+              <ProjectListCard key={project.id} project={project} onEnroll={(selectedProject) => setProjectToEnroll(selectedProject)} />
             ))}
           </div>
 
@@ -127,6 +132,12 @@ export function ProyectosPage() {
       </div>
 
       {modalNuevo ? <CreateProjectModal onClose={() => setSearchParams({})} /> : null}
+      {projectToEnroll ? (
+        <InscribirEstudianteModal
+          projectTitle={projectToEnroll.titulo}
+          onClose={() => setProjectToEnroll(null)}
+        />
+      ) : null}
     </div>
   );
 }

@@ -49,6 +49,18 @@ export const proyectosMapa: ProyectoMapa[] = [
     resumen: 'Apoyo a comercios locales para vender por internet y mejorar su presencia digital.',
     personas: 5,
   },
+  {
+    id: 'salud-mental-comunitaria',
+    institucion: 'Universidad Centroamericana',
+    titulo: 'Salud mental comunitaria en barrios urbanos',
+    ubicacion: 'San Salvador, El Salvador',
+    estado: 'Cerrado',
+    carreras: ['Psicología', 'Enfermería', 'Sociología'],
+    descripcion: 'Brigadas psicosociales y acompañamiento comunitario para familias en zonas urbanas vulnerables.',
+    equipo: ['Laura Castillo', 'José Martínez', 'Mariana López', 'Kevin Reyes', 'Elena Pérez'],
+    resumen: 'Brigadas psicosociales para acompañar a familias en zonas urbanas con apoyo comunitario.',
+    personas: 5,
+  },
 ];
 
 export const marcadoresMapa: MarcadorMapa[] = [
