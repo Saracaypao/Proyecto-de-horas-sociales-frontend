@@ -43,7 +43,7 @@ export default function InstitutionCard({
         </div>
 
         <Link to={`/instituciones/${institution.id}`} className="uca-card-button">
-          View Institution
+          Ver institución
         </Link>
       </div>
     </div>

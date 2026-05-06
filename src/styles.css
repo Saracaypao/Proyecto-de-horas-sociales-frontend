@@ -323,11 +323,12 @@
 }
 
 .main-title {
-  font-size: 32px;
-  font-weight: 800;
-  color: #0f172a;
-  margin-bottom: 12px;
   margin: 0 0 12px 0;
+  font-size: clamp(2.1rem, 3vw, 3.35rem);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  font-weight: 700;
+  color: var(--text);
 }
 
 .main-description {
@@ -548,7 +549,7 @@
   display: block;
   width: 100%;
   background: #2563eb;
-  color: white;
+  color: white !important;
   text-align: center;
   padding: 14px 16px;
   border-radius: 16px;
@@ -646,6 +647,21 @@
 .objective-card p {
   color: var(--muted);
   line-height: 1.55;
+}
+
+.hero-action {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.hero-action .primary-btn {
+  min-height: 48px;
+  padding: 12px 32px;
+  color: white !important;
+  background: linear-gradient(180deg, #3b72f1 0%, #2b63e3 100%) !important;
+  box-shadow: 0 16px 24px rgba(43, 99, 227, 0.22) !important;
+  border: none;
 }
 
 .link-button {

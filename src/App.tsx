@@ -920,13 +920,13 @@ function ProyectosPage() {
   return (
     <div className={`directory-page wide-page ${modalNuevo ? 'modal-open' : ''}`}>
       <PageHero
-        eyebrow="Proyectos disponibles"
         title="Encuentra proyectos según tu carrera o colabora con otras áreas."
         description="Postúlate y participa en iniciativas de impacto social en todo El Salvador."
         action={
-          <button className="primary-btn rounded-icon" type="button" onClick={() => setSearchParams({ nuevo: '1' })} title="Crear nuevo proyecto">
-            <Plus size={24} />
-        </button>
+          <button className="primary-btn" type="button" onClick={() => setSearchParams({ nuevo: '1' })}>
+            <Plus size={18} />
+            <span>Crear nuevo proyecto</span>
+          </button>
         }
       />
 
