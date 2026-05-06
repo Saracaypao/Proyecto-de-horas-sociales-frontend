@@ -1,0 +1,278 @@
+/* ═══════════════════════════════════════════════════════════════
+   DASHBOARD PAGE — styles
+   ═══════════════════════════════════════════════════════════════ */
+
+.dashboard-page {
+  padding: 32px 40px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ── Header ─────────────────────────────────────────────────── */
+.dash-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.dash-header h1 {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--text);
+  margin: 6px 0 4px;
+}
+
+.dash-subtitle {
+  color: var(--muted);
+  font-size: 0.92rem;
+  margin: 0;
+}
+
+/* ── Export button group ─────────────────────────────────────── */
+.dash-export-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.dash-export-wrapper {
+  position: relative;
+}
+
+.dash-export-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  min-width: 210px;
+  z-index: 50;
+}
+
+.dash-export-dropdown button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 0.9rem;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s;
+  text-align: left;
+}
+
+.dash-export-dropdown button:hover {
+  background: var(--bg);
+}
+
+/* ── KPI Grid ────────────────────────────────────────────────── */
+.dash-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.dash-kpi-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 2px 8px rgba(18, 37, 77, 0.05);
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.dash-kpi-card:hover {
+  box-shadow: 0 8px 24px rgba(18, 37, 77, 0.1);
+  transform: translateY(-2px);
+}
+
+.dash-kpi-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--kpi-color) 12%, transparent);
+  color: var(--kpi-color);
+  flex-shrink: 0;
+}
+
+.dash-kpi-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.dash-kpi-label {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dash-kpi-value {
+  font-size: 1.7rem;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1;
+}
+
+.dash-kpi-sub {
+  font-size: 0.78rem;
+  color: var(--green);
+  font-weight: 600;
+}
+
+/* ── Chart Card ──────────────────────────────────────────────── */
+.dash-chart-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(18, 37, 77, 0.05);
+}
+
+.dash-chart-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 20px;
+}
+
+/* ── 2-col grid ──────────────────────────────────────────────── */
+.dash-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 900px) {
+  .dash-grid-2 {
+    grid-template-columns: 1fr;
+  }
+  .dashboard-page {
+    padding: 20px 16px 40px;
+  }
+}
+
+/* ── Tooltip ─────────────────────────────────────────────────── */
+.dash-tooltip {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 14px;
+  box-shadow: var(--shadow);
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.dash-tooltip-label {
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+/* ── Table ───────────────────────────────────────────────────── */
+.dash-table-wrapper {
+  overflow-x: auto;
+}
+
+.dash-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.dash-table th {
+  text-align: left;
+  padding: 10px 14px;
+  background: var(--bg);
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.dash-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  color: var(--text);
+  vertical-align: middle;
+}
+
+.dash-table tr:last-child td {
+  border-bottom: none;
+}
+
+.dash-table tr:hover td {
+  background: var(--bg);
+}
+
+.dash-num {
+  font-weight: 700;
+  text-align: right;
+}
+
+.dash-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--blue) 10%, transparent);
+  color: var(--blue);
+}
+
+/* ── Print styles (PDF export via window.print) ──────────────── */
+@media print {
+  .topbar,
+  .dash-export-group,
+  .dash-export-wrapper {
+    display: none !important;
+  }
+
+  .dashboard-page {
+    padding: 0;
+    gap: 16px;
+  }
+
+  .dash-chart-card,
+  .dash-kpi-card {
+    break-inside: avoid;
+    box-shadow: none;
+    border: 1px solid #dde3ef;
+  }
+
+  .dash-grid-2 {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .dash-kpi-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  body {
+    background: white !important;
+  }
+}

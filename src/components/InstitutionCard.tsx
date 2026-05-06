@@ -1,14 +1,6 @@
-import { MapPin as MapPinned } from "lucide-react";
-import { Link } from "react-router-dom";
-
-interface Institucion {
-  id: string;
-  nombre: string;
-  ubicacion?: string;
-  tipo?: string;
-  image?: string;
-  estadisticas?: [string, string][];
-}
+import { MapPin as MapPinned } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import type { Institucion } from '../types';
 
 export default function InstitutionCard({
   institution,
@@ -25,7 +17,9 @@ export default function InstitutionCard({
       </div>
 
       <div className="uca-card-body">
-        <span className="uca-category-tag">{institution.tipo?.toUpperCase() || 'PRIVATE UNIVERSITY'}</span>
+        <span className="uca-category-tag">
+          {institution.tipo?.toUpperCase() || 'PRIVATE UNIVERSITY'}
+        </span>
         <h2 className="uca-card-title">{institution.nombre}</h2>
 
         <div className="uca-card-location">
