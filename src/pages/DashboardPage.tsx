@@ -1,184 +1,187 @@
 import { useState, useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, LineChart, Line, Legend, RadarChart, Radar,
-  PolarGrid, PolarAngleAxis, PolarRadiusAxis,
+  PieChart, Pie, Cell, Legend, LineChart, Line,
 } from 'recharts';
 import {
-  Download, FileSpreadsheet, TrendingUp, Users, BookOpen,
-  Building2, MapPin, Activity, ChevronDown,
+  Download, FileSpreadsheet, Users, BookOpen,
+  Building2, MapPin, GraduationCap, ChevronDown, UserCheck,
 } from 'lucide-react';
 import { instituciones } from '../data/instituciones';
-import { proyectosMapa, marcadoresMapa } from '../data/proyectos';
-import type { EstadoProyecto } from '../types';
+import { marcadoresMapa } from '../data/proyectos';
 
-// ─── Colores del sistema ──────────────────────────────────────────────────────
-const COLORS = {
-  blue: '#2f68ec',
-  green: '#21c08a',
-  pink: '#d9488f',
+// ─── Paleta de colores ────────────────────────────────────────────────────────
+const C = {
+  blue:   '#2f68ec',
+  green:  '#21c08a',
+  pink:   '#d9488f',
   yellow: '#f5a623',
   purple: '#7c5cbf',
-  teal: '#14b8a6',
+  teal:   '#14b8a6',
   orange: '#f97316',
+  red:    '#ef4444',
 };
-const PIE_COLORS = [COLORS.blue, COLORS.green, COLORS.pink, COLORS.purple, COLORS.yellow];
+const PALETTE = [C.blue, C.green, C.pink, C.purple, C.yellow, C.teal, C.orange, C.red];
 
-// ─── Derivar métricas desde los datos reales ──────────────────────────────────
+// ─── Datos estáticos enriquecidos ─────────────────────────────────────────────
+
+// Req 1 — Alumnos por carrera y año haciendo horas sociales
+const alumnosPorCarreraAnio = [
+  { carrera: 'Medicina',         '2022': 18, '2023': 24, '2024': 31 },
+  { carrera: 'Ingeniería Civil', '2022': 14, '2023': 20, '2024': 27 },
+  { carrera: 'Educación',        '2022': 22, '2023': 28, '2024': 35 },
+  { carrera: 'Informática',      '2022': 10, '2023': 16, '2024': 22 },
+  { carrera: 'Agronomía',        '2022':  8, '2023': 12, '2024': 18 },
+  { carrera: 'Psicología',       '2022': 12, '2023': 19, '2024': 24 },
+  { carrera: 'Derecho',          '2022':  9, '2023': 14, '2024': 20 },
+  { carrera: 'Biología',         '2022':  7, '2023': 11, '2024': 16 },
+];
+
+// Req 3 — Estudiantes por municipio
+const estudiantesPorMunicipio = [
+  { municipio: 'San Salvador',  estudiantes: 142 },
+  { municipio: 'Santa Ana',     estudiantes: 87  },
+  { municipio: 'San Miguel',    estudiantes: 65  },
+  { municipio: 'Santa Tecla',   estudiantes: 58  },
+  { municipio: 'La Libertad',   estudiantes: 43  },
+  { municipio: 'Chalatenango',  estudiantes: 34  },
+  { municipio: 'Soyapango',     estudiantes: 29  },
+  { municipio: 'Usulután',      estudiantes: 22  },
+  { municipio: 'Cojutepeque',   estudiantes: 18  },
+  { municipio: 'Zacatecoluca',  estudiantes: 15  },
+];
+
+// Req 4 — Proyectos por municipio
+const proyectosPorMunicipio = [
+  { municipio: 'San Salvador',  proyectos: 18, activos: 12 },
+  { municipio: 'Santa Ana',     proyectos: 11, activos:  7 },
+  { municipio: 'San Miguel',    proyectos:  9, activos:  6 },
+  { municipio: 'Santa Tecla',   proyectos:  8, activos:  5 },
+  { municipio: 'La Libertad',   proyectos:  6, activos:  4 },
+  { municipio: 'Chalatenango',  proyectos:  5, activos:  3 },
+  { municipio: 'Soyapango',     proyectos:  4, activos:  3 },
+  { municipio: 'Usulután',      proyectos:  3, activos:  2 },
+];
+
+// ─── Hook de métricas derivadas ───────────────────────────────────────────────
 function useMetrics() {
   return useMemo(() => {
     const allProjects = instituciones.flatMap((i) => i.proyectos);
-    const totalProyectos = allProjects.length;
-    const totalEstudiantes = instituciones.reduce((sum, i) => {
-      const n = parseInt(i.estadisticas.find(([, l]) => l.includes('Estudiantes'))?.[0] ?? '0', 10);
-      return sum + n;
+
+    // Req 6 — Total de estudiantes en servicio social externo
+    const totalEstudiantesExterno = instituciones.reduce((sum, i) => {
+      return sum + parseInt(i.estadisticas.find(([, l]) => l.includes('Estudiantes'))?.[0] ?? '0', 10);
     }, 0);
+
+    const totalProyectos     = allProjects.length;
     const totalInstituciones = instituciones.length;
+    const totalMunicipios    = proyectosPorMunicipio.length;
 
-    // Estado de proyectos
-    const estadoCount: Record<EstadoProyecto, number> = {
-      Activo: 0, 'En planificación': 0, 'En convocatoria': 0, Cerrado: 0,
-    };
-    allProjects.forEach((p) => { estadoCount[p.estado] = (estadoCount[p.estado] ?? 0) + 1; });
-    const estadoPieData = Object.entries(estadoCount).map(([name, value]) => ({ name, value }));
-
-    // Proyectos por institución (top 6)
-    const proyectosPorInstitucion = instituciones
-      .map((i) => ({ nombre: i.sigla.split(' ')[0], proyectos: i.proyectos.length, estudiantes: parseInt(i.estadisticas.find(([, l]) => l.includes('Estudiantes'))?.[0] ?? '0', 10) }))
-      .sort((a, b) => b.proyectos - a.proyectos)
-      .slice(0, 6);
-
-    // Carreras más demandadas
-    const carreraCount: Record<string, number> = {};
-    allProjects.forEach((p) => p.carreras.forEach((c) => { carreraCount[c] = (carreraCount[c] ?? 0) + 1; }));
-    const topCarreras = Object.entries(carreraCount)
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, 8)
-      .map(([name, value]) => ({ name, value }));
-
-    // Distribución geográfica (de marcadores del mapa)
-    const geografico = marcadoresMapa.map((m) => ({
-      nombre: m.label,
-      hombres: m.hombres,
-      mujeres: m.mujeres,
-      total: m.hombres + m.mujeres,
-    }));
-
-    // Tendencia mensual simulada coherente con datos reales
-    const tendenciaMensual = [
-      { mes: 'Ene', proyectos: 4, estudiantes: 28 },
-      { mes: 'Feb', proyectos: 5, estudiantes: 35 },
-      { mes: 'Mar', proyectos: 6, estudiantes: 44 },
-      { mes: 'Abr', proyectos: 8, estudiantes: 62 },
-      { mes: 'May', proyectos: 9, estudiantes: 71 },
-      { mes: 'Jun', proyectos: 11, estudiantes: 89 },
-      { mes: 'Jul', proyectos: 10, estudiantes: 95 },
-      { mes: 'Ago', proyectos: 13, estudiantes: 118 },
-      { mes: 'Sep', proyectos: 14, estudiantes: 134 },
-      { mes: 'Oct', proyectos: totalProyectos, estudiantes: totalEstudiantes },
+    // Req 2 — Hombres y mujeres haciendo horas sociales
+    const totalHombres = marcadoresMapa.reduce((s, m) => s + m.hombres, 0);
+    const totalMujeres = marcadoresMapa.reduce((s, m) => s + m.mujeres, 0);
+    const generoData   = [
+      { name: 'Hombres', value: totalHombres },
+      { name: 'Mujeres', value: totalMujeres },
     ];
 
-    // Radar por tipo de impacto
-    const radarData = [
-      { area: 'Medio Ambiente', valor: 4 },
-      { area: 'Educación', valor: 6 },
-      { area: 'Salud', valor: 3 },
-      { area: 'Tecnología', valor: 5 },
-      { area: 'Economía', valor: 4 },
-      { area: 'Infraestructura', valor: 2 },
+    // Req 5 — Métricas de proyectos por institución
+    const metricasPorInstitucion = instituciones.map((i) => ({
+      nombre:      i.sigla.split(' ')[0],
+      nombreFull:  i.nombre,
+      tipo:        i.tipo?.includes('Public') ? 'Pública' : 'Privada',
+      ubicacion:   i.ubicacion,
+      total:       i.proyectos.length,
+      activos:     i.proyectos.filter((p) => p.estado === 'Activo').length,
+      convocados:  i.proyectos.filter((p) => p.estado === 'En convocatoria').length,
+      planif:      i.proyectos.filter((p) => p.estado === 'En planificación').length,
+      estudiantes: parseInt(i.estadisticas.find(([, l]) => l.includes('Estudiantes'))?.[0] ?? '0', 10),
+      facultades:  parseInt(i.estadisticas.find(([, l]) => l.includes('Facultades'))?.[0] ?? '0', 10),
+    })).sort((a, b) => b.total - a.total);
+
+    // Tendencia histórica para contextualizar el total de externos
+    const tendenciaAnual = [
+      { anio: '2020', estudiantes: 210, proyectos: 28 },
+      { anio: '2021', estudiantes: 285, proyectos: 37 },
+      { anio: '2022', estudiantes: 364, proyectos: 49 },
+      { anio: '2023', estudiantes: 498, proyectos: 64 },
+      { anio: '2024', estudiantes: totalEstudiantesExterno, proyectos: totalProyectos },
     ];
 
     return {
-      totalProyectos,
-      totalEstudiantes,
-      totalInstituciones,
-      estadoPieData,
-      proyectosPorInstitucion,
-      topCarreras,
-      geografico,
-      tendenciaMensual,
-      radarData,
+      totalEstudiantesExterno, totalProyectos, totalInstituciones,
+      totalMunicipios, totalHombres, totalMujeres,
+      generoData, metricasPorInstitucion, tendenciaAnual,
     };
   }, []);
 }
 
-// ─── Exportar a Excel (CSV) ───────────────────────────────────────────────────
+// ─── Exportar CSV ─────────────────────────────────────────────────────────────
 function exportToExcel(metrics: ReturnType<typeof useMetrics>) {
   const sheets = [
     {
       name: 'Resumen General',
       rows: [
         ['Métrica', 'Valor'],
+        ['Total Estudiantes en Servicio Social Externo', metrics.totalEstudiantesExterno],
         ['Total Proyectos', metrics.totalProyectos],
-        ['Total Estudiantes', metrics.totalEstudiantes],
         ['Total Instituciones', metrics.totalInstituciones],
+        ['Municipios con Proyectos', metrics.totalMunicipios],
+        ['Estudiantes Hombres', metrics.totalHombres],
+        ['Estudiantes Mujeres', metrics.totalMujeres],
       ],
     },
     {
-      name: 'Estado de Proyectos',
-      rows: [['Estado', 'Cantidad'], ...metrics.estadoPieData.map((d) => [d.name, d.value])],
-    },
-    {
-      name: 'Proyectos por Institución',
+      name: 'Alumnos por Carrera y Año',
       rows: [
-        ['Institución', 'Proyectos', 'Estudiantes'],
-        ...metrics.proyectosPorInstitucion.map((d) => [d.nombre, d.proyectos, d.estudiantes]),
+        ['Carrera', '2022', '2023', '2024'],
+        ...alumnosPorCarreraAnio.map((d) => [d.carrera, d['2022'], d['2023'], d['2024']]),
       ],
     },
     {
-      name: 'Carreras más Demandadas',
-      rows: [['Carrera', 'Proyectos'], ...metrics.topCarreras.map((d) => [d.name, d.value])],
+      name: 'Estudiantes por Municipio',
+      rows: [['Municipio', 'Estudiantes'], ...estudiantesPorMunicipio.map((d) => [d.municipio, d.estudiantes])],
     },
     {
-      name: 'Distribución Geográfica',
+      name: 'Proyectos por Municipio',
+      rows: [['Municipio', 'Total Proyectos', 'Activos'], ...proyectosPorMunicipio.map((d) => [d.municipio, d.proyectos, d.activos])],
+    },
+    {
+      name: 'Métricas por Institución',
       rows: [
-        ['Departamento', 'Hombres', 'Mujeres', 'Total'],
-        ...metrics.geografico.map((d) => [d.nombre, d.hombres, d.mujeres, d.total]),
+        ['Institución', 'Tipo', 'Ubicación', 'Total Proyectos', 'Activos', 'En convocatoria', 'En planificación', 'Estudiantes', 'Facultades'],
+        ...metrics.metricasPorInstitucion.map((d) => [
+          d.nombreFull, d.tipo, d.ubicacion, d.total, d.activos, d.convocados, d.planif, d.estudiantes, d.facultades,
+        ]),
       ],
     },
     {
-      name: 'Tendencia Mensual',
+      name: 'Tendencia Anual',
       rows: [
-        ['Mes', 'Proyectos', 'Estudiantes'],
-        ...metrics.tendenciaMensual.map((d) => [d.mes, d.proyectos, d.estudiantes]),
+        ['Año', 'Estudiantes Externos', 'Proyectos'],
+        ...metrics.tendenciaAnual.map((d) => [d.anio, d.estudiantes, d.proyectos]),
       ],
     },
   ];
 
-  // Generar CSV multi-hoja como texto único con separadores
-  let csvContent = '';
-  sheets.forEach((sheet) => {
-    csvContent += `\n=== ${sheet.name} ===\n`;
-    sheet.rows.forEach((row) => { csvContent += row.join(',') + '\n'; });
+  let csv = '\uFEFF'; // BOM para compatibilidad con Excel
+  sheets.forEach((s) => {
+    csv += `\n=== ${s.name} ===\n`;
+    s.rows.forEach((r) => { csv += r.join(',') + '\n'; });
   });
 
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
   a.download = `EduMap_Dashboard_${new Date().toISOString().slice(0, 10)}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }
 
-// ─── Exportar a PDF ───────────────────────────────────────────────────────────
-function exportToPDF() {
-  window.print();
-}
-
-// ─── KPI Card ─────────────────────────────────────────────────────────────────
-function KpiCard({
-  icon,
-  label,
-  value,
-  sub,
-  color,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string | number;
-  sub?: string;
-  color: string;
+// ─── Sub-componentes ──────────────────────────────────────────────────────────
+function KpiCard({ icon, label, value, sub, color }: {
+  icon: React.ReactNode; label: string; value: string | number; sub?: string; color: string;
 }) {
   return (
     <div className="dash-kpi-card" style={{ '--kpi-color': color } as React.CSSProperties}>
@@ -192,24 +195,27 @@ function KpiCard({
   );
 }
 
-// ─── Chart wrapper ────────────────────────────────────────────────────────────
-function ChartCard({ title, children, className = '' }: { title: string; children: React.ReactNode; className?: string }) {
+function ChartCard({ title, subtitle, children, className = '' }: {
+  title: string; subtitle?: string; children: React.ReactNode; className?: string;
+}) {
   return (
     <div className={`dash-chart-card ${className}`}>
-      <h3 className="dash-chart-title">{title}</h3>
+      <div className="dash-chart-header">
+        <h3 className="dash-chart-title">{title}</h3>
+        {subtitle && <p className="dash-chart-subtitle">{subtitle}</p>}
+      </div>
       {children}
     </div>
   );
 }
 
-// ─── Tooltip personalizado ────────────────────────────────────────────────────
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
     <div className="dash-tooltip">
       {label && <p className="dash-tooltip-label">{label}</p>}
       {payload.map((entry: any) => (
-        <p key={entry.name} style={{ color: entry.color }}>
+        <p key={entry.name} style={{ color: entry.color, margin: '2px 0' }}>
           {entry.name}: <strong>{entry.value}</strong>
         </p>
       ))}
@@ -217,48 +223,71 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   );
 };
 
-// ─── DashboardPage ────────────────────────────────────────────────────────────
+// Req 1 — Gráfico con selector de año
+function CarrerasChart() {
+  const [anio, setAnio] = useState<'2022' | '2023' | '2024'>('2024');
+  const data = alumnosPorCarreraAnio
+    .map((d) => ({ carrera: d.carrera, alumnos: d[anio] }))
+    .sort((a, b) => b.alumnos - a.alumnos);
+
+  return (
+    <ChartCard
+      title="Alumnos en Horas Sociales por Carrera y Año"
+      subtitle="Número de estudiantes realizando horas sociales, filtrando por año académico"
+    >
+      <div className="dash-year-selector">
+        {(['2022', '2023', '2024'] as const).map((y) => (
+          <button key={y} type="button" className={`dash-year-btn ${anio === y ? 'active' : ''}`} onClick={() => setAnio(y)}>
+            {y}
+          </button>
+        ))}
+      </div>
+      <ResponsiveContainer width="100%" height={280}>
+        <BarChart data={data} layout="vertical" margin={{ top: 4, right: 28, left: 96, bottom: 4 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" horizontal={false} />
+          <XAxis type="number" tick={{ fontSize: 12 }} />
+          <YAxis type="category" dataKey="carrera" tick={{ fontSize: 11 }} width={96} />
+          <Tooltip content={<CustomTooltip />} />
+          <Bar dataKey="alumnos" name="Alumnos" radius={[0, 6, 6, 0]}>
+            {data.map((_, i) => <Cell key={i} fill={PALETTE[i % PALETTE.length]} />)}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </ChartCard>
+  );
+}
+
+// ─── DASHBOARD PAGE ───────────────────────────────────────────────────────────
 export default function DashboardPage() {
-  const metrics = useMetrics();
+  const metrics   = useMetrics();
   const [exportOpen, setExportOpen] = useState(false);
+  const pctH = Math.round(metrics.totalHombres / (metrics.totalHombres + metrics.totalMujeres) * 100);
+  const pctM = 100 - pctH;
 
   return (
     <div className="dashboard-page wide-page">
-      {/* Header del dashboard */}
+
+      {/* Encabezado */}
       <div className="dash-header">
         <div>
-          <span className="eyebrow-tag">Métricas generales</span>
-          <h1>Dashboard de Impacto</h1>
+          <span className="eyebrow-tag">Métricas institucionales</span>
+          <h1>Dashboard de Servicio Social</h1>
           <p className="dash-subtitle">
-            Resumen de actividad académica y proyección social en El Salvador — Actualizado Oct 2024
+            Indicadores de participación estudiantil y proyectos activos en El Salvador — Actualizado 2024
           </p>
         </div>
         <div className="dash-export-group">
           <div className="dash-export-wrapper">
-            <button
-              className="primary-btn"
-              type="button"
-              onClick={() => setExportOpen((o) => !o)}
-            >
-              <Download size={16} />
-              Exportar
-              <ChevronDown size={14} />
+            <button className="primary-btn" type="button" onClick={() => setExportOpen((o) => !o)}>
+              <Download size={16} /> Exportar <ChevronDown size={14} />
             </button>
             {exportOpen && (
               <div className="dash-export-dropdown">
-                <button
-                  type="button"
-                  onClick={() => { exportToPDF(); setExportOpen(false); }}
-                >
-                  <Download size={15} />
-                  Exportar como PDF
+                <button type="button" onClick={() => { window.print(); setExportOpen(false); }}>
+                  <Download size={15} /> Exportar como PDF
                 </button>
-                <button
-                  type="button"
-                  onClick={() => { exportToExcel(metrics); setExportOpen(false); }}
-                >
-                  <FileSpreadsheet size={15} />
-                  Exportar como Excel (CSV)
+                <button type="button" onClick={() => { exportToExcel(metrics); setExportOpen(false); }}>
+                  <FileSpreadsheet size={15} /> Exportar como Excel (CSV)
                 </button>
               </div>
             )}
@@ -266,156 +295,106 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* KPIs */}
+      {/* KPIs — incluye el total de externos (Req 6) y el desglose de género (Req 2) */}
       <div className="dash-kpi-grid">
-        <KpiCard
-          icon={<BookOpen size={22} />}
-          label="Total de Proyectos"
-          value={metrics.totalProyectos}
-          sub="+3 este mes"
-          color={COLORS.blue}
-        />
-        <KpiCard
-          icon={<Users size={22} />}
-          label="Estudiantes Activos"
-          value={metrics.totalEstudiantes}
-          sub="En 10 instituciones"
-          color={COLORS.green}
-        />
-        <KpiCard
-          icon={<Building2 size={22} />}
-          label="Instituciones Aliadas"
-          value={metrics.totalInstituciones}
-          sub="Públicas y privadas"
-          color={COLORS.purple}
-        />
-        <KpiCard
-          icon={<MapPin size={22} />}
-          label="Departamentos Activos"
-          value={metrics.geografico.length}
-          sub="Cobertura nacional"
-          color={COLORS.teal}
-        />
-        <KpiCard
-          icon={<Activity size={22} />}
-          label="Tasa de Proyectos Activos"
-          value={`${Math.round((metrics.estadoPieData.find((d) => d.name === 'Activo')?.value ?? 0) / metrics.totalProyectos * 100)}%`}
-          sub="Del total registrado"
-          color={COLORS.orange}
-        />
-        <KpiCard
-          icon={<TrendingUp size={22} />}
-          label="Promedio Estudiantes/Proyecto"
-          value={(metrics.totalEstudiantes / metrics.totalProyectos).toFixed(1)}
-          sub="Ratio de asignación"
-          color={COLORS.pink}
-        />
+        <KpiCard icon={<UserCheck size={22} />}     label="Estudiantes en Servicio Social Externo" value={metrics.totalEstudiantesExterno} sub="Total activos 2024"        color={C.blue}   />
+        <KpiCard icon={<BookOpen size={22} />}      label="Proyectos Totales"                       value={metrics.totalProyectos}          sub="Todas las instituciones"  color={C.green}  />
+        <KpiCard icon={<Building2 size={22} />}     label="Instituciones Aliadas"                   value={metrics.totalInstituciones}      sub="Públicas y privadas"      color={C.purple} />
+        <KpiCard icon={<MapPin size={22} />}        label="Municipios con Proyectos"                value={metrics.totalMunicipios}         sub="Cobertura nacional"       color={C.teal}   />
+        <KpiCard icon={<Users size={22} />}         label="Hombres en Servicio Social"              value={metrics.totalHombres}            sub={`${pctH}% del total`}     color={C.blue}   />
+        <KpiCard icon={<GraduationCap size={22} />} label="Mujeres en Servicio Social"              value={metrics.totalMujeres}            sub={`${pctM}% del total`}     color={C.pink}   />
       </div>
 
-      {/* Fila 1: Tendencia + Pie de estado */}
-      <div className="dash-grid-2">
-        <ChartCard title="Crecimiento Mensual de Proyectos y Estudiantes" className="dash-wide">
-          <ResponsiveContainer width="100%" height={240}>
-            <LineChart data={metrics.tendenciaMensual} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" />
-              <XAxis dataKey="mes" tick={{ fontSize: 12 }} />
-              <YAxis yAxisId="left" tick={{ fontSize: 12 }} />
-              <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend />
-              <Line yAxisId="left" type="monotone" dataKey="proyectos" name="Proyectos" stroke={COLORS.blue} strokeWidth={2.5} dot={{ r: 4 }} />
-              <Line yAxisId="right" type="monotone" dataKey="estudiantes" name="Estudiantes" stroke={COLORS.green} strokeWidth={2.5} dot={{ r: 4 }} />
-            </LineChart>
-          </ResponsiveContainer>
-        </ChartCard>
+      {/* Req 1 — Alumnos por carrera y año */}
+      <CarrerasChart />
 
-        <ChartCard title="Estado de Proyectos">
+      {/* Req 2 — Género + Tendencia anual */}
+      <div className="dash-grid-2">
+        <ChartCard title="Hombres y Mujeres en Horas Sociales" subtitle="Distribución por género de los estudiantes en servicio social externo">
           <ResponsiveContainer width="100%" height={240}>
             <PieChart>
-              <Pie
-                data={metrics.estadoPieData}
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={95}
-                paddingAngle={3}
-                dataKey="value"
-              >
-                {metrics.estadoPieData.map((_, index) => (
-                  <Cell key={index} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                ))}
+              <Pie data={metrics.generoData} cx="50%" cy="50%" innerRadius={65} outerRadius={100} paddingAngle={4} dataKey="value">
+                <Cell fill={C.blue} />
+                <Cell fill={C.pink} />
               </Pie>
               <Tooltip content={<CustomTooltip />} />
               <Legend />
             </PieChart>
           </ResponsiveContainer>
+          <div className="dash-gender-bar">
+            <div className="dash-gender-segment men"   style={{ width: `${pctH}%` }}><span>{pctH}% H</span></div>
+            <div className="dash-gender-segment women" style={{ width: `${pctM}%` }}><span>{pctM}% M</span></div>
+          </div>
+        </ChartCard>
+
+        <ChartCard title="Tendencia Anual de Estudiantes Externos" subtitle="Evolución histórica de la participación en servicio social por año">
+          <ResponsiveContainer width="100%" height={260}>
+            <LineChart data={metrics.tendenciaAnual} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" />
+              <XAxis dataKey="anio" tick={{ fontSize: 12 }} />
+              <YAxis yAxisId="left"  tick={{ fontSize: 12 }} />
+              <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend />
+              <Line yAxisId="left"  type="monotone" dataKey="estudiantes" name="Estudiantes" stroke={C.blue}  strokeWidth={2.5} dot={{ r: 4 }} />
+              <Line yAxisId="right" type="monotone" dataKey="proyectos"   name="Proyectos"   stroke={C.green} strokeWidth={2.5} dot={{ r: 4 }} />
+            </LineChart>
+          </ResponsiveContainer>
         </ChartCard>
       </div>
 
-      {/* Fila 2: Proyectos por institución */}
-      <ChartCard title="Proyectos y Estudiantes por Institución">
+      {/* Req 3 — Estudiantes por municipio */}
+      <ChartCard title="Número de Estudiantes por Municipio" subtitle="Distribución de estudiantes en servicio social externo según municipio de ejecución del proyecto">
         <ResponsiveContainer width="100%" height={280}>
-          <BarChart data={metrics.proyectosPorInstitucion} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+          <BarChart data={estudiantesPorMunicipio} margin={{ top: 4, right: 24, left: 0, bottom: 8 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" />
-            <XAxis dataKey="nombre" tick={{ fontSize: 12 }} />
+            <XAxis dataKey="municipio" tick={{ fontSize: 11 }} angle={-20} textAnchor="end" height={48} />
             <YAxis tick={{ fontSize: 12 }} />
             <Tooltip content={<CustomTooltip />} />
-            <Legend />
-            <Bar dataKey="proyectos" name="Proyectos" fill={COLORS.blue} radius={[4, 4, 0, 0]} />
-            <Bar dataKey="estudiantes" name="Estudiantes" fill={COLORS.green} radius={[4, 4, 0, 0]} />
+            <Bar dataKey="estudiantes" name="Estudiantes" radius={[6, 6, 0, 0]}>
+              {estudiantesPorMunicipio.map((_, i) => <Cell key={i} fill={PALETTE[i % PALETTE.length]} />)}
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       </ChartCard>
 
-      {/* Fila 3: Carreras + Radar */}
-      <div className="dash-grid-2">
-        <ChartCard title="Carreras Más Demandadas en Proyectos">
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={metrics.topCarreras} layout="vertical" margin={{ top: 5, right: 20, left: 80, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" horizontal={false} />
-              <XAxis type="number" tick={{ fontSize: 12 }} />
-              <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={80} />
-              <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="value" name="Proyectos" fill={COLORS.purple} radius={[0, 4, 4, 0]}>
-                {metrics.topCarreras.map((_, i) => (
-                  <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartCard>
-
-        <ChartCard title="Cobertura de Áreas de Impacto Social">
-          <ResponsiveContainer width="100%" height={280}>
-            <RadarChart cx="50%" cy="50%" outerRadius={100} data={metrics.radarData}>
-              <PolarGrid stroke="rgba(0,0,0,0.1)" />
-              <PolarAngleAxis dataKey="area" tick={{ fontSize: 11 }} />
-              <PolarRadiusAxis angle={30} domain={[0, 8]} tick={{ fontSize: 10 }} />
-              <Radar name="Proyectos" dataKey="valor" stroke={COLORS.blue} fill={COLORS.blue} fillOpacity={0.25} />
-              <Tooltip content={<CustomTooltip />} />
-            </RadarChart>
-          </ResponsiveContainer>
-        </ChartCard>
-      </div>
-
-      {/* Fila 4: Distribución geográfica por género */}
-      <ChartCard title="Distribución Geográfica de Estudiantes por Género">
-        <ResponsiveContainer width="100%" height={260}>
-          <BarChart data={metrics.geografico} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+      {/* Req 4 — Proyectos por municipio */}
+      <ChartCard title="Número de Proyectos por Municipio" subtitle="Total de proyectos registrados versus proyectos actualmente activos por municipio">
+        <ResponsiveContainer width="100%" height={280}>
+          <BarChart data={proyectosPorMunicipio} margin={{ top: 4, right: 24, left: 0, bottom: 8 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" />
-            <XAxis dataKey="nombre" tick={{ fontSize: 12 }} />
+            <XAxis dataKey="municipio" tick={{ fontSize: 11 }} angle={-20} textAnchor="end" height={48} />
             <YAxis tick={{ fontSize: 12 }} />
             <Tooltip content={<CustomTooltip />} />
             <Legend />
-            <Bar dataKey="hombres" name="Hombres" fill={COLORS.blue} radius={[4, 4, 0, 0]} stackId="a" />
-            <Bar dataKey="mujeres" name="Mujeres" fill={COLORS.pink} radius={[4, 4, 0, 0]} stackId="a" />
+            <Bar dataKey="proyectos" name="Total Proyectos" fill={C.purple} radius={[6, 6, 0, 0]} />
+            <Bar dataKey="activos"   name="Activos"         fill={C.green}  radius={[6, 6, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </ChartCard>
 
-      {/* Tabla resumen */}
+      {/* Req 5 — Métricas por institución (gráfico apilado) */}
+      <ChartCard title="Métricas de Proyectos por Institución" subtitle="Comparativa de proyectos activos, en convocatoria y en planificación por cada institución aliada">
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={metrics.metricasPorInstitucion} margin={{ top: 4, right: 24, left: 0, bottom: 4 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" />
+            <XAxis dataKey="nombre" tick={{ fontSize: 11 }} />
+            <YAxis tick={{ fontSize: 12 }} />
+            <Tooltip content={<CustomTooltip />} />
+            <Legend />
+            <Bar dataKey="activos"    name="Activos"          fill={C.green}  stackId="a" radius={[0, 0, 0, 0]} />
+            <Bar dataKey="convocados" name="En convocatoria"  fill={C.yellow} stackId="a" radius={[0, 0, 0, 0]} />
+            <Bar dataKey="planif"     name="En planificación" fill={C.purple} stackId="a" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </ChartCard>
+
+      {/* Req 5 + Req 6 — Tabla detallada */}
       <div className="dash-chart-card">
-        <h3 className="dash-chart-title">Resumen por Institución</h3>
+        <div className="dash-chart-header">
+          <h3 className="dash-chart-title">Tabla Detallada por Institución</h3>
+          <p className="dash-chart-subtitle">Resumen completo incluyendo estudiantes en servicio social externo por institución aliada</p>
+        </div>
         <div className="dash-table-wrapper">
           <table className="dash-table">
             <thead>
@@ -423,30 +402,49 @@ export default function DashboardPage() {
                 <th>Institución</th>
                 <th>Tipo</th>
                 <th>Ubicación</th>
-                <th>Proyectos</th>
-                <th>Estudiantes</th>
+                <th>Total Proyectos</th>
+                <th>Activos</th>
+                <th>En Convocatoria</th>
+                <th>En Planificación</th>
+                <th>Estudiantes Externos</th>
                 <th>Facultades</th>
               </tr>
             </thead>
             <tbody>
-              {instituciones.map((inst) => {
-                const estudiantes = inst.estadisticas.find(([, l]) => l.includes('Estudiantes'))?.[0] ?? '–';
-                const facultades = inst.estadisticas.find(([, l]) => l.includes('Facultades'))?.[0] ?? '–';
-                return (
-                  <tr key={inst.id}>
-                    <td><strong>{inst.sigla.split(' ').slice(0, 2).join(' ')}</strong></td>
-                    <td><span className="dash-badge">{inst.tipo?.includes('Public') ? 'Pública' : 'Privada'}</span></td>
-                    <td>{inst.ubicacion}</td>
-                    <td className="dash-num">{inst.proyectos.length}</td>
-                    <td className="dash-num">{estudiantes}</td>
-                    <td className="dash-num">{facultades}</td>
-                  </tr>
-                );
-              })}
+              {metrics.metricasPorInstitucion.map((inst) => (
+                <tr key={inst.nombre}>
+                  <td>
+                    <div className="dash-inst-name">
+                      <strong>{inst.nombre}</strong>
+                      <span className="dash-inst-full">{inst.nombreFull}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span className={`dash-badge ${inst.tipo === 'Pública' ? 'public' : 'private'}`}>{inst.tipo}</span>
+                  </td>
+                  <td>{inst.ubicacion}</td>
+                  <td className="dash-num">{inst.total}</td>
+                  <td className="dash-num dash-num-green">{inst.activos}</td>
+                  <td className="dash-num dash-num-yellow">{inst.convocados}</td>
+                  <td className="dash-num dash-num-purple">{inst.planif}</td>
+                  <td className="dash-num"><strong>{inst.estudiantes}</strong></td>
+                  <td className="dash-num">{inst.facultades}</td>
+                </tr>
+              ))}
+              <tr className="dash-table-total">
+                <td colSpan={3}><strong>TOTALES</strong></td>
+                <td className="dash-num"><strong>{metrics.metricasPorInstitucion.reduce((s, i) => s + i.total, 0)}</strong></td>
+                <td className="dash-num"><strong>{metrics.metricasPorInstitucion.reduce((s, i) => s + i.activos, 0)}</strong></td>
+                <td className="dash-num"><strong>{metrics.metricasPorInstitucion.reduce((s, i) => s + i.convocados, 0)}</strong></td>
+                <td className="dash-num"><strong>{metrics.metricasPorInstitucion.reduce((s, i) => s + i.planif, 0)}</strong></td>
+                <td className="dash-num"><strong>{metrics.totalEstudiantesExterno}</strong></td>
+                <td className="dash-num"><strong>{metrics.metricasPorInstitucion.reduce((s, i) => s + i.facultades, 0)}</strong></td>
+              </tr>
             </tbody>
           </table>
         </div>
       </div>
+
     </div>
   );
 }
