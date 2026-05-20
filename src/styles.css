@@ -434,12 +434,17 @@
   justify-content: space-between;
   gap: 20px;
   flex-wrap: wrap;
-  border-radius: 18px;
-  background: linear-gradient(180deg, rgba(47,104,236,0.04), rgba(255,255,255,0));
-  border: 1px solid rgba(37,99,235,0.04);
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(47,104,236,0.06), rgba(37,99,235,0.02));
+  border: 1px solid rgba(37,99,235,0.06);
 }
 
 .dash-header h1 { margin: 0; }
+
+/* Remove the noticeable blue top stroke in Students hero while keeping the same card feel */
+.students-page .page-hero {
+  border-top-color: transparent;
+}
 
 /* Make hero title more distinctive using Playfair Display */
 .institutions-hero .main-title {
@@ -2026,10 +2031,6 @@
   border-radius: 50%;
   pointer-events: none;
   box-shadow: 0 0 0 16px rgba(255, 255, 255, 0.08);
-}
-
-.map-scene.focused {
-  /* Zoom solo aplicado al mapa, no a los controles */
 }
 
 .map-scene.focused .map-iframe {
