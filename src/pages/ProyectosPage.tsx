@@ -122,12 +122,7 @@ export function ProyectosPage() {
             ))}
           </div>
 
-          <div className="center-actions">
-            <button className="secondary-btn load-more-btn" type="button">
-              <span className="spin-dot" />
-              Cargar más proyectos
-            </button>
-          </div>
+          {/* Removed static "Cargar más proyectos" button */}
         </section>
       </div>
 
