@@ -1,10 +1,10 @@
-import { ArrowRight, MapPinned, Plus } from 'lucide-react';
+import { ArrowRight, MapPinned, Plus, Search } from 'lucide-react';
 import { useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import InscribirEstudianteModal from '../components/InscribirEstudianteModal';
 import CreateProjectModal from '../components/CreateProjectModal';
 import { ProjectListCard } from '../components/ProjectCards';
-import { BackLink, FilterGroup, PageHero, SearchPanel } from '../components/ui';
+import { BackLink, FilterGroup } from '../components/ui';
 import { instituciones } from '../data/instituciones';
 import { clasificacionEstado, proyectosMapa } from '../data/proyectos';
 
@@ -58,16 +58,28 @@ export function ProyectosPage() {
 
   return (
     <div className={`directory-page wide-page ${modalNuevo ? 'modal-open' : ''}`}>
-      <PageHero
-        title="Encuentra proyectos según tu carrera o colabora con otras áreas."
-        description="Postúlate y participa en iniciativas de impacto social en todo El Salvador."
-        action={
+      <header className="page-hero">
+        <div className="hero-left">
+          <h1 className="main-title">Proyectos según carrera</h1>
+        </div>
+        <div className="hero-right">
+          <div className="hero-search-card">
+            <div className="search-wrapper">
+                <Search size={18} className="search-icon-inside" />
+                <input
+                type="text"
+                placeholder="Palabras clave..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </div>
           <button className="primary-btn" type="button" onClick={() => setSearchParams({ nuevo: '1' })}>
             <Plus size={18} />
             <span>Crear nuevo proyecto</span>
           </button>
-        }
-      />
+        </div>
+      </header>
 
       <div className="chip-row">
         {Object.keys(facultyToMajors).map((chip) => (
@@ -84,7 +96,6 @@ export function ProyectosPage() {
 
       <div className="content-split">
         <aside className="filter-rail">
-          <SearchPanel title="Búsqueda" placeholder="Palabras clave..." value={searchQuery} onChange={setSearchQuery} />
           <FilterGroup
             title="Estado"
             options={['Todos', 'En convocatoria', 'Activo', 'En planificación', 'Cerrado']}
@@ -104,16 +115,6 @@ export function ProyectosPage() {
             <span>
               Mostrando <strong>{filteredProjects.length}</strong> proyectos
             </span>
-            <button
-              className="link-button text-link"
-              type="button"
-              onClick={() =>
-                setSortBy((s) => (s === 'recentes' ? 'titulo' : s === 'titulo' ? 'ubicacion' : 'recentes'))
-              }
-            >
-              Ordenar por:{' '}
-              <strong>{sortBy === 'recentes' ? 'Más recientes' : sortBy === 'titulo' ? 'Título' : 'Ubicación'}</strong>
-            </button>
           </div>
 
           <div className="project-feed">

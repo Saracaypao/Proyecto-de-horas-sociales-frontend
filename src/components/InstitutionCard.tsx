@@ -13,7 +13,7 @@ export default function InstitutionCard({
     <div className="uca-card-v2">
       <div className="uca-card-header">
         <img src={imageUrl} alt={institution.nombre} />
-        <div className="uca-verified-badge">Verified</div>
+        <div className="uca-verified-badge">Aliada</div>
       </div>
 
       <div className="uca-card-body">

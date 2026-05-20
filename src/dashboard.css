@@ -12,17 +12,18 @@
 /* ── Header ─────────────────────────────────────────────────── */
 .dash-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 20px;
   flex-wrap: wrap;
 }
 
 .dash-header h1 {
-  font-size: 2rem;
+  font-size: clamp(2rem, 4.4vw, 3.1rem);
   font-weight: 800;
   color: var(--text);
-  margin: 6px 0 4px;
+  line-height: 1.02;
+  margin: 0 0 4px;
 }
 
 .dash-subtitle {

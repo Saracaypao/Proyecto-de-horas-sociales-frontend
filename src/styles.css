@@ -1,23 +1,22 @@
-:root {
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap');
 
+:root {
   color-scheme: light;
-  :root {
-    color-scheme: light;
-    --bg: #f5f7fc;
-    --bg-deep: #eef2fb;
-    --surface: #ffffff;
-    --surface-soft: #f8faff;
-    --line: #dde3ef;
-    --text: #1c2433;
-    --muted: #687182;
-    --blue: #2f68ec;
-    --blue-deep: #2253c7;
-    --green: #21c08a;
-    --pink: #d9488f;
-    --shadow: 0 12px 30px rgba(18, 37, 77, 0.08);
-    font-family: 'Manrope', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-  }
+  --bg: #f5f7fc;
+  --bg-deep: #eef2fb;
+  --surface: #ffffff;
+  --surface-soft: #f8faff;
+  --line: #dde3ef;
+  --text: #1c2433;
+  --muted: #687182;
+  --blue: #2f68ec;
+  --blue-deep: #2253c7;
+  --green: #21c08a;
+  --pink: #d9488f;
+  --shadow: 0 12px 30px rgba(18, 37, 77, 0.08);
+  font-family: 'Poppins', 'Manrope', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+}
 
   * {
     box-sizing: border-box;
@@ -121,10 +120,12 @@
     font-weight: 600;
     padding: 8px 10px;
     border-radius: 999px;
+    border: 1.5px solid transparent;
   }
 
   .topnav-link.active {
     color: var(--text);
+    border: 1.5px solid var(--text);
   }
 
   .topbar-actions {
@@ -163,11 +164,7 @@
     border-radius: 50%;
     font-weight: 700;
   }
-  background: var(--surface);
-  border: 1px solid var(--line);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
-  color: #7d8598;
-}
+ 
 
 /* --- Card visual overrides (aplicar fuente y estilo de la imagen) --- */
 .project-summary-topline,
@@ -281,26 +278,28 @@
 }
 
 .filter-pill {
-  padding: 10px 20px;
+  height: 38px;
+  padding: 0 16px;
   border-radius: 999px;
-  border: 1px solid #e5e8f0;
-  background: white;
-  color: #64748b;
-  font-weight: 600;
+  background: rgba(255,255,255,0.95);
+  color: #525c6c;
+  font-weight: 700;
   font-size: 14px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  transition: transform 0.12s ease, background 0.12s ease, color 0.12s ease;
 }
 
 .filter-pill:hover {
-  border-color: #2563eb;
-  color: #2563eb;
+  transform: translateY(-2px);
 }
 
 .filter-pill.active {
-  background: #2563eb;
+  background: #172033;
   color: white;
-  border-color: #2563eb;
+  border-color: #172033;
 }
 
 .institution-card-link {
@@ -316,6 +315,182 @@
   align-items: flex-end;
   margin-bottom: 32px;
   gap: 40px;
+}
+
+/* New hero layout for Instituciones */
+.institutions-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 32px;
+  padding: 28px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(47,104,236,0.06), rgba(37,99,235,0.02));
+  border: 1px solid rgba(37,99,235,0.06);
+}
+
+.institutions-hero .hero-left {
+  flex: 1 1 60%;
+}
+
+.institutions-hero .hero-right {
+  flex: 0 0 440px;
+}
+
+.hero-right {
+  display: flex;
+  align-items: center; 
+  gap: 16px;           
+}
+
+.hero-search-card {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  background: white;
+  padding: 12px;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(18,37,77,0.06);
+  border: 1px solid #e9f0ff;
+}
+
+.hero-search-card .search-wrapper input {
+  width: 320px;
+  padding: 12px 16px 12px 44px;
+  border-radius: 10px;
+  border: 1px solid #eef4ff;
+  background: transparent;
+}
+
+.institutions-hero .main-title {
+  margin: 0 0 6px 0;
+}
+
+.institutions-hero .main-description {
+  margin: 0;
+  color: #516076;
+}
+
+/* General page hero to match institutions style */
+.page-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 32px;
+  padding: 28px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(47,104,236,0.06), rgba(37,99,235,0.02));
+  border: 1px solid rgba(37,99,235,0.06);
+}
+
+.page-hero .hero-copy-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: center;
+  width: 100%;
+}
+
+.page-hero .hero-copy-row > div:first-child {
+  flex: 1 1 60%;
+}
+
+.page-hero .hero-action {
+  flex: 0 0 auto;
+}
+
+/* Shared hero card sizing so all top headers feel consistent */
+.page-hero,
+.institutions-hero,
+.dash-header {
+  min-height: 150px;
+  box-sizing: border-box;
+}
+
+.page-hero,
+.institutions-hero {
+  padding: 26px 28px;
+}
+
+.dash-header {
+  width: 100%;
+  margin-inline: 0;
+  padding: 26px 28px;
+}
+
+/* Make action buttons and search look consistent */
+.page-hero .hero-action .primary-btn,
+.hero-search-card .primary-btn {
+  min-height: 48px;
+  padding: 12px 20px;
+}
+
+/* Dashboard header to use same hero visual */
+.dash-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(47,104,236,0.04), rgba(255,255,255,0));
+  border: 1px solid rgba(37,99,235,0.04);
+}
+
+.dash-header h1 { margin: 0; }
+
+/* Make hero title more distinctive using Playfair Display */
+.institutions-hero .main-title {
+  font-family: 'Bebas Neue', 'Poppins', Impact, Arial, sans-serif;
+  font-weight: 400;
+  font-size: clamp(2.6rem, 4.6vw, 4rem);
+  line-height: 1.02;
+  margin: 0 0 8px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #0b1220;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Use Poppins (image 1 style) for main titles to match reference image */
+.page-hero h1,
+.institutions-hero .main-title,
+.institution-meta h1,
+.project-detail-hero h1,
+.dash-header h1 {
+  font-family: 'Poppins', 'Manrope', Arial, sans-serif;
+  font-weight: 800;
+  text-transform: none;
+  letter-spacing: -0.02em;
+  color: #0b1220;
+  margin: 0 0 8px 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+.page-hero h1,
+.institutions-hero .main-title,
+.dash-header h1,
+.project-detail-hero h1 {
+  font-size: clamp(2.2rem, 5vw, 3.6rem);
+  line-height: 1.02;
+}
+
+/* Ensure dashboard header uses same scale as page hero */
+.dash-header h1 {
+  font-size: clamp(2.2rem, 5vw, 3.6rem);
+}
+
+/* Section headings styled with Poppins but smaller and uppercase where needed */
+.section-heading-row h2,
+.section-header h2,
+.dash-chart-title {
+  font-family: 'Poppins', 'Manrope', Arial, sans-serif;
+  font-size: clamp(1rem, 1.6vw, 1.4rem);
+  letter-spacing: 0.01em;
+  text-transform: none;
+  margin: 0;
 }
 
 .title-section {
@@ -670,7 +845,7 @@
   display: flex;
   justify-content: space-between;
   gap: 20px;
-  align-items: flex-start;
+  align-items: center;
 }
 
 .page-hero h1,
@@ -1274,6 +1449,33 @@
   margin: 16px 0;
 }
 
+.detail-gender-stats {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.detail-gender-stats > p {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+}
+
+.detail-gender-stats > div {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.detail-gender-stats span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
 .detail-description h3 {
   font-size: 1.05rem;
   font-weight: 700;
@@ -1827,6 +2029,10 @@
 }
 
 .map-scene.focused {
+  /* Zoom solo aplicado al mapa, no a los controles */
+}
+
+.map-scene.focused .map-iframe {
   transform: scale(1.03);
 }
 
@@ -1986,11 +2192,11 @@
 }
 
 .map-scene {
-  min-height: 760px;
   flex: 1;
   position: relative;
   overflow: hidden;
   border-radius: 0;
+  height: 100%;
   background:
     radial-gradient(circle at 72% 18%, rgba(255, 255, 255, 0.65), transparent 22%),
     linear-gradient(135deg, #dff4df 0%, #c7ecce 52%, #aee4f2 100%);
@@ -2037,6 +2243,8 @@
   background: rgba(255, 255, 255, 0.68);
   border: 1px solid rgba(255, 255, 255, 0.8);
   box-shadow: var(--shadow);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* Marker HTML injected into Leaflet divIcon (gender markers) */
@@ -2152,6 +2360,13 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+.students-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(47, 104, 236, 0.1), transparent 24%),
+    linear-gradient(180deg, #fafbff 0%, var(--bg) 100%);
 }
 
 .chip-row {

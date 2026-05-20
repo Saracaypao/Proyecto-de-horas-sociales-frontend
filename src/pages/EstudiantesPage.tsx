@@ -1,13 +1,24 @@
-import { ArrowRight, GraduationCap } from 'lucide-react';
+import { ArrowRight, GraduationCap, Search } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FilterGroup, PageHero, SearchPanel } from '../components/ui';
+import { FilterGroup } from '../components/ui';
 import { proyectosEstudiantes } from '../data/proyectos';
 
 export default function EstudiantesPage() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [facultyFilter, setFacultyFilter] = useState('Todas');
+  const [facultyFilter, setFacultyFilter] = useState('Todas las facultades');
   const [locationFilter, setLocationFilter] = useState('Todas');
+
+  const facultyChips = [
+    'Todas las facultades',
+    'Arquitectura e Ingeniería',
+    'Ciencias sociales y humanidades',
+    'Comunicación y mercadeo',
+    'Derecho',
+    'Diseño',
+    'Educación',
+    'Administración y Economía',
+  ];
 
   const filteredProjects = proyectosEstudiantes.filter((project) => {
     const query = searchQuery.trim().toLowerCase();
@@ -19,44 +30,51 @@ export default function EstudiantesPage() {
         project.ubicacion,
         ...project.estudiantes.map((s) => `${s.nombre} ${s.carrera} ${s.cargo}`),
       ].some((v) => v.toLowerCase().includes(query));
-    const matchesFaculty = facultyFilter === 'Todas' || project.facultad === facultyFilter;
+    const matchesFaculty =
+      facultyFilter === 'Todas' ||
+      facultyFilter === 'Todas las facultades' ||
+      project.facultad === facultyFilter;
     const matchesLocation = locationFilter === 'Todas' || project.ubicacion === locationFilter;
     return matchesQuery && matchesFaculty && matchesLocation;
   });
 
   return (
     <div className="students-page wide-page">
-      <div className="students-topline">
-        <span className="eyebrow-tag">Universidad Centroamericana (UCA)</span>
+      {/* Removed eyebrow tag as requested */}
+      <header className="page-hero">
+        <div className="hero-left">
+          <h1 className="main-title">Estudiantes por proyecto</h1>
+        </div>
+        <div className="hero-right">
+          <div className="hero-search-card">
+            <div className="search-wrapper">
+                <Search size={18} className="search-icon-inside" />
+                <input
+                type="text"
+                placeholder="Estudiante o proyecto..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div className="chip-row">
+        {facultyChips.map((chip) => (
+          <button
+            key={chip}
+            className={chip === facultyFilter ? 'chip active' : 'chip'}
+            type="button"
+            onClick={() => setFacultyFilter(chip)}
+          >
+            {chip}
+          </button>
+        ))}
       </div>
-      <PageHero
-        title="Estudiantes por proyecto"
-        description="Consulta qué estudiantes de la UCA participan en cada iniciativa activa y conoce sus equipos de trabajo."
-      />
 
       <div className="content-split students-layout">
         <aside className="filter-rail">
-          <SearchPanel
-            title="Búsqueda"
-            placeholder="Estudiante o proyecto..."
-            value={searchQuery}
-            onChange={setSearchQuery}
-          />
-          <FilterGroup
-            title="Filtrar por facultad"
-            options={[
-              'Todas',
-              'Arquitectura e Ingeniería',
-              'Ciencias sociales y humanidades',
-              'Comunicación y mercadeo',
-              'Derecho',
-              'Diseño',
-              'Educación',
-              'Administración y Economía',
-            ]}
-            selected={facultyFilter}
-            onChange={setFacultyFilter}
-          />
           <FilterGroup
             title="Ubicación del proyecto"
             options={['Todas', 'San Salvador', 'Chalatenango', 'Santa Tecla', 'San Miguel']}

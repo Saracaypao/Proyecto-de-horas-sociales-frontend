@@ -266,7 +266,7 @@ function ProjectMapDetail({
               marginTop: '16px',
               marginBottom: '16px'
             }}>
-              <p style={{ fontSize: '13px', fontWeight: '600', marginBottom: '8px', color: '#333' }}>Estudiantes por género</p>
+              <p style={{ fontSize: '13px', fontWeight: '600', marginBottom: '8px', color: '#333' }}>Estudiantes</p>
               <div style={{ display: 'flex', gap: '20px' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px' }}>
                   <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#007bff' }} />
@@ -287,7 +287,6 @@ function ProjectMapDetail({
             <div className="team-section">
               <div className="team-header">
                 <h3>Equipo del proyecto</h3>
-                <button className="link-btn" type="button">Ver todo</button>
               </div>
               <div className="team-list">
                 {project.equipo.map((member, index) => {

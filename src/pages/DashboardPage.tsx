@@ -270,11 +270,9 @@ export default function DashboardPage() {
       {/* Encabezado */}
       <div className="dash-header">
         <div>
-          <span className="eyebrow-tag">Métricas institucionales</span>
+          {/* eyebrow tag removed as requested */}
           <h1>Dashboard de Servicio Social</h1>
-          <p className="dash-subtitle">
-            Indicadores de participación estudiantil y proyectos activos en El Salvador — Actualizado 2024
-          </p>
+          {/* subtitle removed per request */}
         </div>
         <div className="dash-export-group">
           <div className="dash-export-wrapper">

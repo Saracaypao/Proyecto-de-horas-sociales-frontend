@@ -57,41 +57,40 @@ export function InstitucionesPage() {
 
   return (
     <div className="directory-page wide-page">
-      <div className="page-header-top">
-        <div className="title-section">
-          <h1 className="main-title">Instituciones Aliadas</h1>
-          <p className="main-description">
-            Explora universidades, escuelas técnicas e institutos de todo El Salvador que participan en
-            iniciativas de proyectos estudiantiles.
-          </p>
+      <header className="institutions-hero">
+        <div className="hero-left">
+          <h1 className="main-title">Instituciones aliadas</h1>
         </div>
 
-        <div className="actions-section">
-          <div className="search-wrapper">
-            <Search size={18} className="search-icon-inside" />
-            <input
-              type="text"
-              placeholder="Buscar instituciones..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+        <div className="hero-right">
+          <div className="hero-search-card">
+            <div className="search-wrapper">
+              <Search size={18} className="search-icon-inside" />
+              <input
+                type="text"
+                placeholder="Buscar instituciones..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+
+            <button
+              className="filter-action-btn"
+              type="button"
+              onClick={() => setSortBy((c) => (c === 'nombre' ? 'proyectos' : 'nombre'))}
+            >
+              <SlidersHorizontal size={16} />
+              <span>{sortBy === 'nombre' ? 'Ordenar' : 'Más proyectos'}</span>
+            </button>
           </div>
-          <button
-            className="filter-action-btn"
-            type="button"
-            onClick={() => setSortBy((c) => (c === 'nombre' ? 'proyectos' : 'nombre'))}
-          >
-            <SlidersHorizontal size={16} />
-            <span>{sortBy === 'nombre' ? 'Ordenar' : 'Más proyectos'}</span>
-          </button>
         </div>
-      </div>
+      </header>
 
-      <div className="filter-pills-container">
+      <div className="chip-row">
         {categorias.map((cat, index) => (
           <button
             key={cat}
-            className={`filter-pill ${index === activeFilter ? 'active' : ''}`}
+            className={`chip ${index === activeFilter ? 'active' : ''}`}
             onClick={() => setActiveFilter(index)}
             type="button"
           >
