@@ -860,6 +860,12 @@
   min-width: 500px;
 }
 
+/* Ensure the sidebar stays above the map so detail content isn't visually cut */
+.sidebar {
+  position: relative;
+  z-index: 300;
+}
+
 .section-header,
 .list-meta,
 .student-project-header,
@@ -915,6 +921,31 @@
 .team-panel h2,
 .side-panel h3 {
   font-size: 1.65rem;
+}
+
+/* Make the sidebar projects title larger and centered (only for list view) */
+.projects-list-container:not(.animate-fade-in) > .section-header {
+  justify-content: center; /* center the content when icons are not present */
+  padding: 12px 18px;
+}
+.projects-list-container:not(.animate-fade-in) > .section-header h2 {
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--text);
+  text-align: center;
+  width: 100%;
+}
+
+/* In detail view keep header content left-aligned so the "Volver" button stays in the corner */
+.projects-list-container.animate-fade-in > .section-header {
+  justify-content: flex-start;
+  padding: 8px 12px;
+}
+.projects-list-container.animate-fade-in > .section-header h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: left;
+  width: auto;
 }
 
 .stack-list,
@@ -1192,6 +1223,15 @@
   flex-direction: column;
   gap: 12px;
   padding: 0;
+}
+
+/* Keep the gender stats readable in the detail view */
+.detail-gender-stats {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  white-space: nowrap;
+  overflow: visible;
 }
 
 .inst-name {
@@ -1950,7 +1990,7 @@
   flex: 1;
   position: relative;
   overflow: hidden;
-  border-radius: 28px;
+  border-radius: 0;
   background:
     radial-gradient(circle at 72% 18%, rgba(255, 255, 255, 0.65), transparent 22%),
     linear-gradient(135deg, #dff4df 0%, #c7ecce 52%, #aee4f2 100%);
@@ -1962,7 +2002,7 @@
   width: 100%;
   height: 100%;
   border: 0;
-  border-radius: 28px;
+  border-radius: 0;
 }
 
 .map-scene::before,
@@ -1998,6 +2038,39 @@
   border: 1px solid rgba(255, 255, 255, 0.8);
   box-shadow: var(--shadow);
 }
+
+/* Marker HTML injected into Leaflet divIcon (gender markers) */
+.gender-marker .marker-box {
+  background: linear-gradient(180deg, #ffffff, #fbfdff);
+  border: 1px solid rgba(20,30,60,0.08);
+  border-radius: 12px;
+  padding: 6px 8px;
+  box-shadow: 0 8px 20px rgba(12,30,60,0.12);
+  font-size: 13px;
+  font-weight: 800;
+  color: #071024;
+  min-width: 150px;
+  height: 44px;
+  max-width: 260px;
+  overflow: visible;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.gender-marker .marker-row { display:flex; align-items:center; gap:12px; justify-content:center; width:100%; }
+.gender-marker .marker-item { display:flex; align-items:center; gap:8px; padding:4px 6px; border-radius:8px; flex:1 1 0; justify-content:center; }
+.gender-marker .dot { width:12px; height:12px; border-radius:50%; display:inline-block; border:2px solid #fff; box-shadow:0 2px 4px rgba(0,0,0,0.12); }
+.gender-marker .dot.men { background:#0b63ff; }
+.gender-marker .dot.women { background:#d93a7d; }
+.gender-marker .num { font-weight:900; font-size:14px; color:#071024; display:inline-block; max-width:140px; overflow:visible; white-space:nowrap; }
+
+/* subtle background on items to separate them visually */
+.gender-marker .marker-item:first-child { background: rgba(11,99,255,0.04); }
+.gender-marker .marker-item:last-child { background: rgba(217,58,125,0.04); }
+
+/* subtle glass effect */
+.gender-marker .marker-box { backdrop-filter: blur(6px); }
+
 
 .legend {
   width: 10px;

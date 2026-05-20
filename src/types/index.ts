@@ -42,8 +42,10 @@ export type MarcadorMapa = {
   label: string;
   hombres: number;
   mujeres: number;
-  top: number;
-  left: number;
+  // Replaced screen-position percentages with geographic coordinates
+  // (latitude / longitude) so markers can be anchored to the map.
+  lat: number;
+  lng: number;
   id: string;
 };
 

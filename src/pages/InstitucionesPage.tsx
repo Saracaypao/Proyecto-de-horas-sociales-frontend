@@ -1,4 +1,4 @@
-import { Filter, Search, SlidersHorizontal } from 'lucide-react';
+import { Search, SlidersHorizontal } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useParams } from 'react-router-dom';
@@ -76,14 +76,6 @@ export function InstitucionesPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <button
-            className="filter-action-btn"
-            type="button"
-            onClick={() => setActiveFilter((c) => (c + 1) % categorias.length)}
-          >
-            <Filter size={16} />
-            <span>Filtrar</span>
-          </button>
           <button
             className="filter-action-btn"
             type="button"
