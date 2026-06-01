@@ -207,10 +207,23 @@
   box-shadow: 0 4px 16px rgba(28,41,71,0.08), 0 8px 24px rgba(28,41,71,0.06) !important;
 }
 
+/* Make the summary card relative so the status pill can be positioned
+   absolutely; this prevents the pill from shifting when content changes */
+.map-sidebar-detail .project-summary-card {
+  position: relative;
+  min-height: 130px; /* ensure cards aren't too small */
+}
+
+/* Ensure cards in the map sidebar also get the same layout rules */
+.sidebar.map-sidebar .project-summary-card {
+  position: relative;
+  min-height: 130px;
+}
+
 .map-sidebar-detail .project-summary-card .summary-copy {
   color: #6b778c;
   margin-bottom: 10px;
-  font-size: 0.95rem;
+  font-size: 0.86rem; /* slightly smaller so descriptions are less prominent */
 }
 
 .map-sidebar-detail .project-summary-card .avatar-row {
@@ -267,6 +280,29 @@
 .pill.status {
   height: 30px;
   padding: 0 10px;
+}
+
+/* Position the status pill top-right so it doesn't shift with content */
+.map-sidebar-detail .pill.status {
+  position: absolute;
+  top: 12px;
+  left: 12px; /* position on the left side of the card */
+  margin-left: 0;
+}
+
+/* Override the default right-aligned pill for the map sidebar (keep it in-flow, left-aligned) */
+.sidebar.map-sidebar .pill.status {
+  margin-left: 0 !important;
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+}
+
+/* Allow titles to wrap and control card sizing to better fit variable content */
+.map-sidebar-detail .project-summary-card h3 {
+  white-space: normal;
+  font-size: 1.05rem;
+  margin-top: 6px;
 }
 
 /* --- Institution grid: card layout to match reference image --- */
@@ -2372,16 +2408,24 @@
 
 .chip-row {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   height: 38px;
   padding: 0 16px;
   background: rgba(255, 255, 255, 0.9);
   color: #525c6c;
   border-radius: 999px;
+  border: 1px solid #e2e8f4;
+  box-shadow: 0 4px 14px rgba(18, 37, 71, 0.04);
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .chip.active {
@@ -2551,6 +2595,36 @@
   /* Ensure a visible border at all times like the reference */
   border: 1px solid #e6edf8 !important;
   background: var(--surface) !important;
+}
+
+.project-list-main {
+  min-width: 0;
+}
+
+.project-topline-item {
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.project-list-card h3,
+.project-summary-card h3 {
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.project-list-card .summary-copy,
+.project-summary-card .summary-copy {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.majors-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
 }
 
 .project-list-stats {
@@ -3565,6 +3639,60 @@ input[type="checkbox"].check:checked {
   gap: 40px;
 }
 
+.project-detail-body .detail-main {
+  min-width: 0;
+}
+
+.project-detail-body .detail-section {
+  padding-bottom: 28px;
+}
+
+.project-detail-side-stack {
+  display: grid;
+  gap: 18px;
+  align-content: start;
+}
+
+.detail-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.detail-meta-chip {
+  padding: 12px 14px;
+  border: 1px solid #e6edf8;
+  background: #f8fafc;
+  border-radius: 14px;
+}
+
+.detail-meta-chip span {
+  display: block;
+  font-size: 0.76rem;
+  color: var(--muted);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.detail-meta-chip strong {
+  font-size: 0.98rem;
+  color: var(--text);
+}
+
+.detail-pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.detail-team-grid {
+  display: grid;
+  gap: 10px;
+}
+
 .detail-main {
   display: flex;
   flex-direction: column;
@@ -3847,6 +3975,35 @@ input[type="checkbox"].check:checked {
 
   .project-list-stats {
     order: -1;
+
+  @media (max-width: 1024px) {
+    .project-list-card {
+      grid-template-columns: 1fr;
+    }
+
+    .project-list-stats {
+      text-align: left;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .project-detail-body {
+      grid-template-columns: 1fr;
+    }
+
+    .detail-meta-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  @media (max-width: 700px) {
+    .project-list-stats {
+      grid-template-columns: 1fr;
+    }
+
+    .detail-meta-grid {
+      grid-template-columns: 1fr;
+    }
+  }
   }
 
   .modal-card {
@@ -4012,4 +4169,91 @@ input[type="checkbox"].check:checked {
 }
 .modal-image-remove:hover {
   background: rgba(220, 38, 38, 0.95);
+}
+
+/* ── Estudiantes asignados ──────────────────────────────────── */
+.student-assignment-block {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.student-assignment-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.student-assignment-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #162033;
+}
+
+.student-assignment-header p {
+  margin: 4px 0 0;
+  color: #6b7280;
+  font-size: 0.88rem;
+}
+
+.student-add-btn {
+  flex-shrink: 0;
+}
+
+.student-assignment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.student-assignment-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+  padding: 14px;
+  border: 1px solid #dbe4f3;
+  border-radius: 16px;
+  background: #f8fbff;
+}
+
+.student-assignment-row .field {
+  margin: 0;
+}
+
+.student-row-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 12px;
+  background: #fff1f2;
+  color: #be123c;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.student-row-remove:hover {
+  background: #ffe4e6;
+  transform: translateY(-1px);
+}
+
+@media (max-width: 860px) {
+  .student-assignment-header {
+    flex-direction: column;
+  }
+
+  .student-assignment-row {
+    grid-template-columns: 1fr;
+  }
+
+  .student-row-remove {
+    width: 100%;
+    height: 44px;
+  }
 }

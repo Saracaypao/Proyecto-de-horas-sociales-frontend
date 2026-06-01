@@ -1,25 +1,76 @@
-import { Search, SlidersHorizontal } from 'lucide-react';
-import { useState } from 'react';
+import { MapPinned, Search, SlidersHorizontal } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useParams } from 'react-router-dom';
 import InstitutionCard from '../components/InstitutionCard';
-import { ProjectCompactCard } from '../components/ProjectCards';
-import { BackLink, SearchPanel } from '../components/ui';
+import { BackLink } from '../components/ui';
 import { instituciones } from '../data/instituciones';
+import {
+  getInstitutionById,
+  getInstitutions,
+  type InstitutionDetailResponse,
+  type InstitutionListResponse,
+  type InstitutionProjectResponse,
+} from '../services/api';
+import type { Institucion } from '../types';
+
+function normalizeProjectStatus(estado: string) {
+  if (estado === 'Cerrado') return 'Cerrado';
+  if (estado === 'Activo') return 'Activo';
+  return 'En progreso';
+}
 
 // ─── InstitucionesPage ────────────────────────────────────────────────────────
 export function InstitucionesPage() {
   const [activeFilter, setActiveFilter] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'nombre' | 'proyectos'>('nombre');
+  const [sortBy, setSortBy] = useState<'nombre-asc' | 'nombre-desc'>('nombre-asc');
+  const [items, setItems] = useState<InstitutionListResponse[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const categorias = [
-    'Todos',
-    'Universidades Públicas',
-    'Universidades Privadas',
-    'Escuelas Técnicas',
-    'Institutos Especializados',
-  ];
+  useEffect(() => {
+    let active = true;
+
+    async function loadInstitutions() {
+      try {
+        setLoading(true);
+        setError('');
+        const data = await getInstitutions();
+        if (!active) return;
+        setItems(data);
+      } catch {
+        if (!active) return;
+        setError('No se pudo conectar con el backend. Mostrando datos de respaldo.');
+        setItems(
+          instituciones.map((institution) => ({
+            id: institution.id,
+            nombre: institution.nombre,
+            tipo: institution.tipo ?? null,
+            ubicacion: institution.ubicacion,
+            image: institution.image ?? null,
+              totalProyectosActivos: institution.proyectos.filter((project) => project.estado === 'Activo').length,
+            totalEstudiantesAsignados: Number(
+              institution.estadisticas.find(([, label]) => label.toLowerCase().includes('estudiantes'))?.[0] ?? 0
+            ),
+          }))
+        );
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    loadInstitutions();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const institutionTypes = useMemo(
+    () => ['Todos', ...Array.from(new Set(items.map((institution) => institution.tipo?.trim()).filter(Boolean))).sort()],
+    [items]
+  );
 
   const institutionImages = [
     'InstitutionDetailView.jpeg',
@@ -34,24 +85,17 @@ export function InstitucionesPage() {
     'InstitutionDetailView.jpeg',
   ];
 
-  const filteredInstitutions = instituciones
+  const filteredInstitutions = items
     .filter((inst) => {
       const query = searchQuery.trim().toLowerCase();
       const matchesQuery =
-        !query ||
-        [inst.nombre, inst.ubicacion, inst.descripcion, inst.tipo ?? ''].some((v) =>
-          v.toLowerCase().includes(query)
-        );
-      const matchesCategory =
-        categorias[activeFilter] === 'Todos' ||
-        (categorias[activeFilter] === 'Universidades Públicas' && (inst.tipo ?? '').toLowerCase().includes('public')) ||
-        (categorias[activeFilter] === 'Universidades Privadas' && (inst.tipo ?? '').toLowerCase().includes('private')) ||
-        (categorias[activeFilter] === 'Escuelas Técnicas' && (inst.tipo ?? '').toLowerCase().includes('technical')) ||
-        (categorias[activeFilter] === 'Institutos Especializados' && (inst.tipo ?? '').toLowerCase().includes('institute'));
+        !query || [inst.nombre, inst.ubicacion, inst.tipo ?? ''].some((v) => v.toLowerCase().includes(query));
+      const selectedType = institutionTypes[activeFilter];
+      const matchesCategory = selectedType === 'Todos' || (inst.tipo ?? '') === selectedType;
       return matchesQuery && matchesCategory;
     })
     .sort((a, b) => {
-      if (sortBy === 'proyectos') return b.proyectos.length - a.proyectos.length;
+      if (sortBy === 'nombre-desc') return b.nombre.localeCompare(a.nombre);
       return a.nombre.localeCompare(b.nombre);
     });
 
@@ -77,35 +121,52 @@ export function InstitucionesPage() {
             <button
               className="filter-action-btn"
               type="button"
-              onClick={() => setSortBy((c) => (c === 'nombre' ? 'proyectos' : 'nombre'))}
+              onClick={() => setSortBy((c) => (c === 'nombre-asc' ? 'nombre-desc' : 'nombre-asc'))}
             >
               <SlidersHorizontal size={16} />
-              <span>{sortBy === 'nombre' ? 'Ordenar' : 'Más proyectos'}</span>
+              <span>{sortBy === 'nombre-asc' ? 'Ordenar A-Z' : 'Ordenar Z-A'}</span>
             </button>
           </div>
         </div>
       </header>
 
+      {loading ? <p className="muted">Cargando instituciones...</p> : null}
+      {!loading && error ? <p className="muted">{error}</p> : null}
+
       <div className="chip-row">
-        {categorias.map((cat, index) => (
+        {institutionTypes.map((type, index) => (
           <button
-            key={cat}
+            key={type}
             className={`chip ${index === activeFilter ? 'active' : ''}`}
             onClick={() => setActiveFilter(index)}
             type="button"
           >
-            {cat}
+            {type}
           </button>
         ))}
       </div>
 
       <div className="institution-grid">
         {filteredInstitutions.map((inst, i) => {
-          const imageSrc = `/images/${institutionImages[i % institutionImages.length]}`;
+          const imageSrc = inst.image ?? `/images/${institutionImages[i % institutionImages.length]}`;
+          const cardInstitution: Institucion = {
+            id: String(inst.id),
+            nombre: inst.nombre,
+            sigla: inst.nombre,
+            ubicacion: inst.ubicacion,
+            tipo: inst.tipo ?? undefined,
+            image: inst.image ?? undefined,
+            descripcion: '',
+            estadisticas: [
+              [String(inst.totalProyectosActivos), 'Proyectos activos'],
+              [String(inst.totalEstudiantesAsignados), 'Estudiantes asignados'],
+            ],
+            proyectos: [],
+          };
           return (
-            <Link key={inst.id} to={`/instituciones/${inst.id}`} className="institution-card-link">
-              <InstitutionCard institution={inst} imageUrl={imageSrc} />
-            </Link>
+            <div key={inst.id} className="institution-card-link">
+              <InstitutionCard institution={cardInstitution} imageUrl={imageSrc} />
+            </div>
           );
         })}
       </div>
@@ -114,85 +175,90 @@ export function InstitucionesPage() {
 }
 
 // ─── InstitutionTabs ──────────────────────────────────────────────────────────
-function InstitutionTabs({ institution }: { institution: (typeof instituciones)[number] }) {
-  const [tab, setTab] = useState<'general' | 'projects' | 'past' | 'students'>('projects');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('Todos');
-
-  const proyectos = institution.proyectos ?? [];
-  const matchProject = (project: (typeof proyectos)[number]) => {
-    const query = searchQuery.trim().toLowerCase();
-    const matchesQuery =
-      !query ||
-      [project.titulo, project.ubicacion, project.descripcion, project.carreras.join(' ')].some((v) =>
-        v.toLowerCase().includes(query)
-      );
-    const matchesStatus = statusFilter === 'Todos' || project.estado === statusFilter;
-    return matchesQuery && matchesStatus;
-  };
-
-  const proyectosActivos = proyectos.filter((p) => p.estado !== 'Cerrado').filter(matchProject);
-  const proyectosPasados = proyectos.filter((p) => p.estado === 'Cerrado').filter(matchProject);
+function InstitutionTabs({ institution }: { institution: InstitutionDetailResponse }) {
+  const [tab, setTab] = useState<'general' | 'active' | 'progress' | 'closed'>('progress');
 
   return (
     <>
       <div className="tabs-row">
-        {(['general', 'projects', 'past', 'students'] as const).map((t) => (
+        {(['general', 'active', 'progress', 'closed'] as const).map((t) => (
           <button key={t} className={`tab ${tab === t ? 'active' : ''}`} type="button" onClick={() => setTab(t)}>
-            {t === 'general' ? 'General' : t === 'projects' ? 'Proyectos activos' : t === 'past' ? 'Proyectos pasados' : 'Estudiantes'}
+            {t === 'general' ? 'General' : t === 'active' ? 'Proyectos activos' : t === 'progress' ? 'Proyectos en progreso' : 'Proyectos cerrados'}
           </button>
         ))}
       </div>
 
       <div className="institution-content">
-        <section className="projects-zone" style={{ display: tab === 'projects' ? 'block' : 'none' }}>
+        <section className="projects-zone" style={{ display: tab === 'active' ? 'block' : 'none' }}>
           <div className="section-heading-row">
-            <h2>Iniciativas actuales</h2>
-            <div className="inline-tools">
-              <SearchPanel
-                title=""
-                placeholder={`Buscar proyectos de ${institution.sigla?.split(' ')[0] ?? ''}...`}
-                compact
-                value={searchQuery}
-                onChange={setSearchQuery}
-              />
-              <button
-                className="secondary-btn"
-                type="button"
-                onClick={() =>
-                  setStatusFilter((c) =>
-                    c === 'Todos' ? 'Activo' : c === 'Activo' ? 'En convocatoria' : c === 'En convocatoria' ? 'Cerrado' : 'Todos'
-                  )
-                }
-              >
-                Filtrar
-              </button>
-            </div>
+            <h2>Proyectos activos</h2>
           </div>
           <div className="institution-project-grid">
-            {proyectosActivos.length
-              ? proyectosActivos.map((p) => <ProjectCompactCard key={p.id} project={p} />)
+            {institution.proyectosActivos.length
+              ? institution.proyectosActivos.map((p) => (
+                  <article key={p.id} className="compact-project-card">
+                    <div className="project-summary-topline">{p.nombreInstitucion}</div>
+                    <div className="compact-head">
+                      <h3>{p.nombreProyecto}</h3>
+                      <div className="pill status active">Activo</div>
+                    </div>
+                    <p className="muted with-icon">
+                      <MapPinned size={15} />
+                      {p.ubicacion}
+                    </p>
+                  </article>
+                ))
               : <p>No hay proyectos activos.</p>}
           </div>
         </section>
 
-        <section className="projects-zone" style={{ display: tab === 'past' ? 'block' : 'none' }}>
-          <div className="section-heading-row"><h2>Proyectos pasados</h2></div>
+        <section className="projects-zone" style={{ display: tab === 'progress' ? 'block' : 'none' }}>
+          <div className="section-heading-row">
+            <h2>Proyectos en progreso</h2>
+          </div>
           <div className="institution-project-grid">
-            {proyectosPasados.length
-              ? proyectosPasados.map((p) => <ProjectCompactCard key={p.id} project={p} />)
-              : <p>No hay proyectos pasados.</p>}
+            {institution.proyectosEnProgreso.length
+              ? institution.proyectosEnProgreso.map((p) => (
+                  <article key={p.id} className="compact-project-card">
+                    <div className="project-summary-topline">{p.nombreInstitucion}</div>
+                    <div className="compact-head">
+                      <h3>{p.nombreProyecto}</h3>
+                      <div className="pill status planning">En progreso</div>
+                    </div>
+                    <p className="muted with-icon">
+                      <MapPinned size={15} />
+                      {p.ubicacion}
+                    </p>
+                  </article>
+                ))
+              : <p>No hay proyectos en progreso.</p>}
+          </div>
+        </section>
+
+        <section className="projects-zone" style={{ display: tab === 'closed' ? 'block' : 'none' }}>
+          <div className="section-heading-row"><h2>Proyectos cerrados</h2></div>
+          <div className="institution-project-grid">
+            {institution.proyectosCerrados.length
+              ? institution.proyectosCerrados.map((p) => (
+                  <article key={p.id} className="compact-project-card">
+                    <div className="project-summary-topline">{p.nombreInstitucion}</div>
+                    <div className="compact-head">
+                      <h3>{p.nombreProyecto}</h3>
+                      <div className="pill status closed">Cerrado</div>
+                    </div>
+                    <p className="muted with-icon">
+                      <MapPinned size={15} />
+                      {p.ubicacion}
+                    </p>
+                  </article>
+                ))
+              : <p>No hay proyectos cerrados.</p>}
           </div>
         </section>
 
         <section style={{ display: tab === 'general' ? 'block' : 'none' }}>
           <div className="section-heading-row"><h2>General</h2></div>
           <p>{institution.descripcion}</p>
-        </section>
-
-        <section style={{ display: tab === 'students' ? 'block' : 'none' }}>
-          <div className="section-heading-row"><h2>Estudiantes</h2></div>
-          <p>Listado de estudiantes asignados (si aplica).</p>
         </section>
       </div>
     </>
@@ -201,12 +267,83 @@ function InstitutionTabs({ institution }: { institution: (typeof instituciones)[
 
 // ─── InstitucionDetallePage ───────────────────────────────────────────────────
 export function InstitucionDetallePage() {
-  const { id = 'ues' } = useParams();
-  const institution = instituciones.find((i) => i.id === id) ?? instituciones[0];
+  const { id = '1' } = useParams();
+  const [institution, setInstitution] = useState<InstitutionDetailResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadInstitution() {
+      try {
+        setLoading(true);
+        setError('');
+        const data = await getInstitutionById(id);
+        if (!active) return;
+        setInstitution(data);
+      } catch {
+        if (!active) return;
+        const fallback = instituciones.find((item) => String(item.id) === String(id)) ?? instituciones[0];
+        const mappedProjects: InstitutionProjectResponse[] = fallback.proyectos.map((project) => ({
+          id: project.id,
+          nombreInstitucion: fallback.nombre,
+          nombreProyecto: project.titulo,
+          estadoProyecto: normalizeProjectStatus(project.estado) as InstitutionProjectResponse['estadoProyecto'],
+          ubicacion: project.ubicacion,
+        }));
+        setInstitution({
+          id: fallback.id,
+          image: fallback.image ?? null,
+          tipo: fallback.tipo ?? null,
+          nombre: fallback.nombre,
+          ubicacion: fallback.ubicacion,
+          descripcion: fallback.descripcion,
+          totalProyectosActivos: fallback.proyectos.filter((project) => project.estado !== 'Cerrado').length,
+          totalEstudiantesAsignados: Number(
+            fallback.estadisticas.find(([, label]) => label.toLowerCase().includes('estudiantes'))?.[0] ?? 0
+          ),
+          totalCarrerasAplicables: new Set(fallback.proyectos.flatMap((project) => project.carreras)).size,
+          proyectosGenerales: mappedProjects,
+          proyectosActivos: mappedProjects.filter((project) => project.estadoProyecto === 'Activo'),
+          proyectosEnProgreso: mappedProjects.filter((project) => project.estadoProyecto === 'En progreso'),
+          proyectosCerrados: mappedProjects.filter((project) => project.estadoProyecto === 'Cerrado'),
+        });
+        setError('No se pudo conectar con el backend. Mostrando datos de respaldo.');
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    loadInstitution();
+
+    return () => {
+      active = false;
+    };
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="detail-page wide-page">
+        <BackLink to="/instituciones" label="Volver a instituciones" />
+        <p className="muted">Cargando institución...</p>
+      </div>
+    );
+  }
+
+  if (!institution) {
+    return (
+      <div className="detail-page wide-page">
+        <BackLink to="/instituciones" label="Volver a instituciones" />
+        <p className="muted">No se encontró la institución.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="detail-page wide-page">
       <BackLink to="/instituciones" label="Volver a instituciones" />
+      {error ? <p className="muted">{error}</p> : null}
 
       <section className="institution-hero">
         <div className="checker-bg" />
@@ -220,12 +357,18 @@ export function InstitucionDetallePage() {
           </div>
         </div>
         <div className="stats-row">
-          {institution.estadisticas.map(([value, label]) => (
-            <div key={label} className="stat-block">
-              <strong>{value}</strong>
-              <span>{label}</span>
-            </div>
-          ))}
+          <div className="stat-block">
+            <strong>{institution.totalProyectosActivos}</strong>
+            <span>Proyectos activos</span>
+          </div>
+          <div className="stat-block">
+            <strong>{institution.totalEstudiantesAsignados}</strong>
+            <span>Estudiantes asignados</span>
+          </div>
+          <div className="stat-block">
+            <strong>{institution.totalCarrerasAplicables}</strong>
+            <span>Carreras aplicables</span>
+          </div>
         </div>
       </section>
 

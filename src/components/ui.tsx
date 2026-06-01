@@ -13,6 +13,7 @@ export function Field({
   textarea = false,
   value,
   onChange,
+  required = false,
 }: {
   label: string;
   placeholder: string;
@@ -22,6 +23,7 @@ export function Field({
   textarea?: boolean;
   value?: string;
   onChange?: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  required?: boolean;
 }) {
   return (
     <label className="field">
@@ -29,8 +31,8 @@ export function Field({
       <div className="field-input">
         {icon ? <span className="field-icon">{icon}</span> : null}
         {textarea
-          ? <textarea placeholder={placeholder} rows={5} value={value} onChange={onChange} />
-          : <input type={type} placeholder={placeholder} value={value} onChange={onChange} />}
+          ? <textarea placeholder={placeholder} rows={5} value={value} onChange={onChange} required={required} />
+          : <input type={type} placeholder={placeholder} value={value} onChange={onChange} required={required} />}
         {suffix ? <span className="field-suffix">{suffix}</span> : null}
       </div>
     </label>

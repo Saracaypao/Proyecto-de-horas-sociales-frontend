@@ -1,13 +1,48 @@
 import { CreditCard, GraduationCap, X, UserRound } from 'lucide-react';
+import { useState } from 'react';
+import { enrollStudent } from '../services/api';
 import { Field } from './ui';
 
 export default function InscribirEstudianteModal({
   projectTitle,
+  projectId,
   onClose,
+  onEnrolled,
 }: {
   projectTitle: string;
+  projectId: string;
   onClose: () => void;
+  onEnrolled?: (updatedProject?: any) => void;
 }) {
+  const [name, setName] = useState('');
+  const [carnet, setCarnet] = useState('');
+  const [career, setCareer] = useState('');
+  const [email, setEmail] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      const resp: any = await enrollStudent(projectId, {
+        nombre: name,
+        carnet,
+        carrera: career,
+        email: email || undefined,
+      });
+      // notify caller with updated project (if backend returned it)
+      try { onEnrolled?.(resp?.project ?? resp); } catch {}
+      onClose();
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : 'No se pudo inscribir al estudiante');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   return (
     <div
       className="modal-backdrop"
@@ -15,10 +50,7 @@ export default function InscribirEstudianteModal({
       aria-modal="true"
       aria-label={`Inscribir estudiante en ${projectTitle}`}
     >
-      <form className="modal-card enrollment-modal" onSubmit={(e) => {
-        e.preventDefault();
-        onClose();
-      }}>
+      <form className="modal-card enrollment-modal" onSubmit={handleSubmit}>
         <div className="modal-header">
           <div>
             <h2>Inscribir estudiante</h2>
@@ -30,17 +62,20 @@ export default function InscribirEstudianteModal({
         </div>
 
         <div className="form-grid">
-          <Field label="Nombre del estudiante" placeholder="Nombre completo" icon={<UserRound size={18} />} />
-          <Field label="Carnet" placeholder="Ej. 20230045" icon={<CreditCard size={18} />} />
-          <Field label="Carrera" placeholder="Ej. Ingeniería en Sistemas" icon={<GraduationCap size={18} />} />
+          <Field label="Nombre del estudiante" placeholder="Nombre completo" icon={<UserRound size={18} />} value={name} onChange={(event) => setName(event.target.value)} />
+          <Field label="Carnet" placeholder="Ej. 20230045" icon={<CreditCard size={18} />} value={carnet} onChange={(event) => setCarnet(event.target.value)} />
+          <Field label="Carrera" placeholder="Ej. Ingeniería en Sistemas" icon={<GraduationCap size={18} />} value={career} onChange={(event) => setCareer(event.target.value)} />
+          <Field label="Email (opcional)" placeholder="estudiante@ejemplo.edu.sv" icon={<UserRound size={18} />} value={email} onChange={(event) => setEmail(event.target.value)} />
         </div>
+
+        {error ? <p className="modal-error">{error}</p> : null}
 
         <div className="modal-footer">
           <button className="secondary-btn" type="button" onClick={onClose}>
             Cancelar
           </button>
-          <button className="primary-btn" type="submit">
-            Inscribir estudiante
+          <button className="primary-btn" type="submit" disabled={isSaving}>
+            {isSaving ? 'Inscribiendo...' : 'Inscribir estudiante'}
           </button>
         </div>
       </form>

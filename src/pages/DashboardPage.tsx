@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend, LineChart, Line,
@@ -9,6 +9,16 @@ import {
 } from 'lucide-react';
 import { instituciones } from '../data/instituciones';
 import { marcadoresMapa } from '../data/proyectos';
+import {
+  getInstitutions,
+  getMapMarkers,
+  getProjects,
+  getDashboardSummary,
+  type DashboardSummaryResponse,
+  type InstitutionListResponse,
+  type MapMarkerResponse,
+  type ProjectListResponse,
+} from '../services/api';
 
 // ─── Paleta de colores ────────────────────────────────────────────────────────
 const C = {
@@ -20,6 +30,7 @@ const C = {
   teal:   '#14b8a6',
   orange: '#f97316',
   red:    '#ef4444',
+  gray:   '#6b7280',
 };
 const PALETTE = [C.blue, C.green, C.pink, C.purple, C.yellow, C.teal, C.orange, C.red];
 
@@ -64,43 +75,61 @@ const proyectosPorMunicipio = [
 ];
 
 // ─── Hook de métricas derivadas ───────────────────────────────────────────────
-function useMetrics() {
+function useMetrics(
+  apiProjects: ProjectListResponse[],
+  apiInstitutions: InstitutionListResponse[],
+  apiMarkers: MapMarkerResponse[],
+  apiSummary: DashboardSummaryResponse | null,
+) {
   return useMemo(() => {
     const allProjects = instituciones.flatMap((i) => i.proyectos);
 
     // Req 6 — Total de estudiantes en servicio social externo
-    const totalEstudiantesExterno = instituciones.reduce((sum, i) => {
-      return sum + parseInt(i.estadisticas.find(([, l]) => l.includes('Estudiantes'))?.[0] ?? '0', 10);
-    }, 0);
+    // Prioriza el dato real del backend (summary), luego las instituciones de la API, luego datos locales
+    const totalEstudiantesExterno =
+      apiSummary?.totalStudentsExternal ??
+      (apiInstitutions.reduce((sum, institution) => {
+        return sum + Number(institution.totalEstudiantesAsignados ?? 0);
+      }, 0) || instituciones.reduce((sum, i) => {
+        return sum + parseInt(i.estadisticas.find(([, l]) => l.includes('Estudiantes'))?.[0] ?? '0', 10);
+      }, 0));
 
-    const totalProyectos     = allProjects.length;
-    const totalInstituciones = instituciones.length;
+    const totalProyectos     = apiSummary?.totalProjects ?? (apiProjects.length || allProjects.length);
+    const totalInstituciones = apiSummary?.totalInstitutions ?? (apiInstitutions.length || instituciones.length);
     const totalMunicipios    = proyectosPorMunicipio.length;
 
     // Req 2 — Hombres y mujeres haciendo horas sociales
-    const totalHombres = marcadoresMapa.reduce((s, m) => s + m.hombres, 0);
-    const totalMujeres = marcadoresMapa.reduce((s, m) => s + m.mujeres, 0);
-    const generoData   = [
+    const summaryHombres = apiSummary?.genderSummary?.hombres;
+    const summaryMujeres = apiSummary?.genderSummary?.mujeres;
+    const totalHombres =
+      summaryHombres != null
+        ? summaryHombres
+        : apiMarkers.reduce((s, m) => s + Number(m.hombres ?? 0), 0) || marcadoresMapa.reduce((s, m) => s + m.hombres, 0);
+    const totalMujeres =
+      summaryMujeres != null
+        ? summaryMujeres
+        : apiMarkers.reduce((s, m) => s + Number(m.mujeres ?? 0), 0) || marcadoresMapa.reduce((s, m) => s + m.mujeres, 0);
+    const generoData = [
       { name: 'Hombres', value: totalHombres },
       { name: 'Mujeres', value: totalMujeres },
     ];
 
     // Req 5 — Métricas de proyectos por institución
     const metricasPorInstitucion = instituciones.map((i) => ({
-      nombre:      i.sigla.split(' ')[0],
+      nombre:      i.nombre.split('(')[0].trim(),
       nombreFull:  i.nombre,
       tipo:        i.tipo?.includes('Public') ? 'Pública' : 'Privada',
       ubicacion:   i.ubicacion,
       total:       i.proyectos.length,
       activos:     i.proyectos.filter((p) => p.estado === 'Activo').length,
-      convocados:  i.proyectos.filter((p) => p.estado === 'En convocatoria').length,
-      planif:      i.proyectos.filter((p) => p.estado === 'En planificación').length,
+      progreso:    i.proyectos.filter((p) => p.estado !== 'Activo' && p.estado !== 'Cerrado').length,
+      cerrados:    i.proyectos.filter((p) => p.estado === 'Cerrado').length,
       estudiantes: parseInt(i.estadisticas.find(([, l]) => l.includes('Estudiantes'))?.[0] ?? '0', 10),
       facultades:  parseInt(i.estadisticas.find(([, l]) => l.includes('Facultades'))?.[0] ?? '0', 10),
     })).sort((a, b) => b.total - a.total);
 
-    // Tendencia histórica para contextualizar el total de externos
-    const tendenciaAnual = [
+    // Tendencia histórica — si el backend devuelve trendByYear lo usa, si no usa datos fijos
+    const tendenciaAnual = apiSummary?.trendByYear ?? [
       { anio: '2020', estudiantes: 210, proyectos: 28 },
       { anio: '2021', estudiantes: 285, proyectos: 37 },
       { anio: '2022', estudiantes: 364, proyectos: 49 },
@@ -113,7 +142,7 @@ function useMetrics() {
       totalMunicipios, totalHombres, totalMujeres,
       generoData, metricasPorInstitucion, tendenciaAnual,
     };
-  }, []);
+  }, [apiProjects, apiInstitutions, apiMarkers, apiSummary]);
 }
 
 // ─── Exportar CSV ─────────────────────────────────────────────────────────────
@@ -149,9 +178,9 @@ function exportToExcel(metrics: ReturnType<typeof useMetrics>) {
     {
       name: 'Métricas por Institución',
       rows: [
-        ['Institución', 'Tipo', 'Ubicación', 'Total Proyectos', 'Activos', 'En convocatoria', 'En planificación', 'Estudiantes', 'Facultades'],
+        ['Institución', 'Tipo', 'Ubicación', 'Total Proyectos', 'Activos', 'En progreso', 'Cerrados', 'Estudiantes', 'Facultades'],
         ...metrics.metricasPorInstitucion.map((d) => [
-          d.nombreFull, d.tipo, d.ubicacion, d.total, d.activos, d.convocados, d.planif, d.estudiantes, d.facultades,
+          d.nombreFull, d.tipo, d.ubicacion, d.total, d.activos, d.progreso, d.cerrados, d.estudiantes, d.facultades,
         ]),
       ],
     },
@@ -259,10 +288,55 @@ function CarrerasChart() {
 
 // ─── DASHBOARD PAGE ───────────────────────────────────────────────────────────
 export default function DashboardPage() {
-  const metrics   = useMetrics();
+  const [apiProjects, setApiProjects] = useState<ProjectListResponse[]>([]);
+  const [apiInstitutions, setApiInstitutions] = useState<InstitutionListResponse[]>([]);
+  const [apiMarkers, setApiMarkers] = useState<MapMarkerResponse[]>([]);
+  const [apiSummary, setApiSummary] = useState<DashboardSummaryResponse | null>(null);
+
+  const metrics   = useMetrics(apiProjects, apiInstitutions, apiMarkers, apiSummary);
   const [exportOpen, setExportOpen] = useState(false);
-  const pctH = Math.round(metrics.totalHombres / (metrics.totalHombres + metrics.totalMujeres) * 100);
-  const pctM = 100 - pctH;
+
+  const total = metrics.totalHombres + metrics.totalMujeres;
+  const pctH  = total > 0 ? Math.round((metrics.totalHombres / total) * 100) : 50;
+  const pctM  = 100 - pctH;
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadDashboardData() {
+      try {
+        const [projects, institutions, markers] = await Promise.all([
+          getProjects(),
+          getInstitutions(),
+          getMapMarkers(),
+        ]);
+        if (!active) return;
+        setApiProjects(projects);
+        setApiInstitutions(institutions);
+        setApiMarkers(markers);
+      } catch {
+        if (!active) return;
+        setApiProjects([]);
+        setApiInstitutions([]);
+        setApiMarkers([]);
+      }
+
+      // Carga el summary por separado para no bloquear si falla
+      try {
+        const summary = await getDashboardSummary();
+        if (!active) return;
+        setApiSummary(summary);
+      } catch {
+        // El summary es opcional: si falla, useMetrics usa los datos ya cargados
+      }
+    }
+
+    loadDashboardData();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
     <div className="dashboard-page wide-page">
@@ -270,9 +344,7 @@ export default function DashboardPage() {
       {/* Encabezado */}
       <div className="dash-header">
         <div>
-          {/* eyebrow tag removed as requested */}
           <h1>Dashboard de Servicio Social</h1>
-          {/* subtitle removed per request */}
         </div>
         <div className="dash-export-group">
           <div className="dash-export-wrapper">
@@ -372,7 +444,7 @@ export default function DashboardPage() {
       </ChartCard>
 
       {/* Req 5 — Métricas por institución (gráfico apilado) */}
-      <ChartCard title="Métricas de Proyectos por Institución" subtitle="Comparativa de proyectos activos, en convocatoria y en planificación por cada institución aliada">
+      <ChartCard title="Métricas de Proyectos por Institución" subtitle="Comparativa de proyectos activos, en progreso y cerrados por cada institución aliada">
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={metrics.metricasPorInstitucion} margin={{ top: 4, right: 24, left: 0, bottom: 4 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" />
@@ -381,8 +453,8 @@ export default function DashboardPage() {
             <Tooltip content={<CustomTooltip />} />
             <Legend />
             <Bar dataKey="activos"    name="Activos"          fill={C.green}  stackId="a" radius={[0, 0, 0, 0]} />
-            <Bar dataKey="convocados" name="En convocatoria"  fill={C.yellow} stackId="a" radius={[0, 0, 0, 0]} />
-            <Bar dataKey="planif"     name="En planificación" fill={C.purple} stackId="a" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="progreso"   name="En progreso"      fill={C.yellow} stackId="a" radius={[0, 0, 0, 0]} />
+            <Bar dataKey="cerrados"   name="Cerrados"         fill={C.gray} stackId="a" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </ChartCard>
@@ -402,8 +474,8 @@ export default function DashboardPage() {
                 <th>Ubicación</th>
                 <th>Total Proyectos</th>
                 <th>Activos</th>
-                <th>En Convocatoria</th>
-                <th>En Planificación</th>
+                <th>En Progreso</th>
+                <th>Cerrados</th>
                 <th>Estudiantes Externos</th>
                 <th>Facultades</th>
               </tr>
@@ -423,8 +495,8 @@ export default function DashboardPage() {
                   <td>{inst.ubicacion}</td>
                   <td className="dash-num">{inst.total}</td>
                   <td className="dash-num dash-num-green">{inst.activos}</td>
-                  <td className="dash-num dash-num-yellow">{inst.convocados}</td>
-                  <td className="dash-num dash-num-purple">{inst.planif}</td>
+                  <td className="dash-num dash-num-yellow">{inst.progreso}</td>
+                  <td className="dash-num dash-num-purple">{inst.cerrados}</td>
                   <td className="dash-num"><strong>{inst.estudiantes}</strong></td>
                   <td className="dash-num">{inst.facultades}</td>
                 </tr>
@@ -433,8 +505,8 @@ export default function DashboardPage() {
                 <td colSpan={3}><strong>TOTALES</strong></td>
                 <td className="dash-num"><strong>{metrics.metricasPorInstitucion.reduce((s, i) => s + i.total, 0)}</strong></td>
                 <td className="dash-num"><strong>{metrics.metricasPorInstitucion.reduce((s, i) => s + i.activos, 0)}</strong></td>
-                <td className="dash-num"><strong>{metrics.metricasPorInstitucion.reduce((s, i) => s + i.convocados, 0)}</strong></td>
-                <td className="dash-num"><strong>{metrics.metricasPorInstitucion.reduce((s, i) => s + i.planif, 0)}</strong></td>
+                <td className="dash-num"><strong>{metrics.metricasPorInstitucion.reduce((s, i) => s + i.progreso, 0)}</strong></td>
+                <td className="dash-num"><strong>{metrics.metricasPorInstitucion.reduce((s, i) => s + i.cerrados, 0)}</strong></td>
                 <td className="dash-num"><strong>{metrics.totalEstudiantesExterno}</strong></td>
                 <td className="dash-num"><strong>{metrics.metricasPorInstitucion.reduce((s, i) => s + i.facultades, 0)}</strong></td>
               </tr>

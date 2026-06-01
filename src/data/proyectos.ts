@@ -18,7 +18,7 @@ export const proyectosMapa: ProyectoMapa[] = [
     institucion: 'Universidad Centroamericana',
     titulo: 'Alfabetización digital para escuelas rurales',
     ubicacion: 'Chalatenango, El Salvador',
-    estado: 'En convocatoria',
+    estado: 'En progreso',
     carreras: ['Educación', 'Informática', 'Sociología'],
     descripcion: 'Talleres de habilidades digitales, acceso a computadoras y navegación segura para niñas, niños y adultos.',
     equipo: ['Valeria Cruz', 'Diego Flores', 'Ana López'],
@@ -42,7 +42,7 @@ export const proyectosMapa: ProyectoMapa[] = [
     institucion: 'Escuela Mónica Herrera',
     titulo: 'Acompañamiento de comercio electrónico',
     ubicacion: 'Santa Tecla, El Salvador',
-    estado: 'En convocatoria',
+    estado: 'En progreso',
     carreras: ['Mercadeo', 'Administración', 'Diseño Gráfico'],
     descripcion: 'Acompañamiento a comerciantes para lanzar ventas en línea y fortalecer su presencia digital.',
     equipo: ['Camila Vargas', 'Andrés Morales', 'Luis Méndez'],
@@ -74,8 +74,9 @@ export const marcadoresMapa: MarcadorMapa[] = [
 
 export const proyectosEstudiantes: ProyectoEstudiante[] = [
   {
+    id: 'alfabetizacion-digital',
     titulo: 'Alfabetización digital para comunidades rurales',
-    facultad: 'Educación',
+    facultad: 'Ciencias Sociales y Humanidades',
     ubicacion: 'Chalatenango',
     estudiantes: [
       { nombre: 'Valeria Cruz', cargo: 'Líder del proyecto', carrera: 'Sociología', avatar: 'VC' },
@@ -84,8 +85,9 @@ export const proyectosEstudiantes: ProyectoEstudiante[] = [
     ],
   },
   {
+    id: 'vivienda-sostenible',
     titulo: 'Prototipo de vivienda urbana sostenible',
-    facultad: 'Arquitectura e Ingeniería',
+    facultad: 'Arquitectura e Ingenierías',
     ubicacion: 'San Salvador',
     estudiantes: [
       { nombre: 'Mateo Rivera', cargo: 'Arquitecto líder', carrera: 'Arquitectura', avatar: 'MR' },
@@ -93,8 +95,9 @@ export const proyectosEstudiantes: ProyectoEstudiante[] = [
     ],
   },
   {
+    id: 'emprendimientos-locales',
     titulo: 'Acompañamiento de comercio electrónico',
-    facultad: 'Administración y Economía',
+    facultad: 'Comunicación y Mercadeo',
     ubicacion: 'Santa Tecla',
     estudiantes: [
       { nombre: 'Camila Vargas', cargo: 'Estratega de marca', carrera: 'Mercadeo', avatar: 'CV' },
@@ -126,5 +129,6 @@ export const clasificacionEstado: Record<EstadoProyecto, string> = {
   Activo: 'active',
   'En planificación': 'planning',
   'En convocatoria': 'recruiting',
+  'En progreso': 'recruiting',
   Cerrado: 'closed',
 };
