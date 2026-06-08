@@ -9,6 +9,7 @@ class StudentsService {
       nombre: student.nombre,
       carnet: student.carnet,
       carrera: student.carrera,
+      genero:  student.genero ?? null,
       avatar: student.avatar ?? null,
       email: student.email ?? null,
     }));
@@ -41,6 +42,7 @@ class StudentsService {
           carnet: student.carnet,
           carrera: student.carrera,
           cargo: 'Estudiante',
+          genero: student.genero ?? null,
           avatar: student.avatar ?? null,
           email: student.email ?? null,
         }));
@@ -79,6 +81,7 @@ class StudentsService {
         nombre: String(body.nombre),
         carnet: String(body.carnet),
         carrera: String(body.carrera),
+        genero:  (body.genero === 'Masculino' || body.genero === 'Femenino') ? body.genero : null,
         avatar: typeof body.avatar === 'string' ? body.avatar : null,
         email: typeof body.email === 'string' ? body.email : null,
       },
@@ -90,6 +93,7 @@ class StudentsService {
       nombre: student.nombre,
       carnet: student.carnet,
       carrera: student.carrera,
+      genero:  student.genero ?? null,
       avatar: student.avatar ?? null,
       email: student.email ?? null,
     };

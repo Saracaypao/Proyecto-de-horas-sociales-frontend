@@ -8,6 +8,7 @@ type StudentDraft = {
   carnet: string;
   carrera: string;
   email: string;
+  genero: 'Masculino' | 'Femenino' | '';
 };
 
 export default function CreateProjectModal({ onClose }: { onClose: () => void }) {
@@ -33,7 +34,9 @@ export default function CreateProjectModal({ onClose }: { onClose: () => void })
   const [endDate, setEndDate] = useState('');
   const [description, setDescription] = useState('');
   const [slots, setSlots] = useState('');
-  const [students, setStudents] = useState<StudentDraft[]>([{ nombre: '', carnet: '', carrera: '', email: '' }]);
+  const [students, setStudents] = useState<StudentDraft[]>([
+    { nombre: '', carnet: '', carrera: '', email: '', genero: '' },
+  ]);
 
   function handleProjectFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -68,11 +71,18 @@ export default function CreateProjectModal({ onClose }: { onClose: () => void })
   }
 
   function handleStudentChange(index: number, field: keyof StudentDraft, value: string) {
-    setStudents((current) => current.map((student, studentIndex) => (studentIndex === index ? { ...student, [field]: value } : student)));
+    setStudents((current) =>
+      current.map((student, studentIndex) =>
+        studentIndex === index ? { ...student, [field]: value } : student
+      )
+    );
   }
 
   function addStudentRow() {
-    setStudents((current) => [...current, { nombre: '', carnet: '', carrera: '', email: '' }]);
+    setStudents((current) => [
+      ...current,
+      { nombre: '', carnet: '', carrera: '', email: '', genero: '' },
+    ]);
   }
 
   function removeStudentRow(index: number) {
@@ -93,6 +103,7 @@ export default function CreateProjectModal({ onClose }: { onClose: () => void })
         carnet: student.carnet.trim(),
         carrera: student.carrera.trim(),
         email: student.email.trim(),
+        genero: student.genero || undefined,
       }))
       .filter((student) => student.nombre || student.carnet || student.carrera || student.email);
 
@@ -151,6 +162,7 @@ export default function CreateProjectModal({ onClose }: { onClose: () => void })
           carnet: student.carnet,
           carrera: student.carrera || normalizedCareers[0] || '',
           email: student.email,
+          genero: student.genero,
         })),
       });
 
@@ -260,6 +272,18 @@ export default function CreateProjectModal({ onClose }: { onClose: () => void })
                     onChange={(event) => handleStudentChange(index, 'email', event.target.value)}
                     required
                   />
+                  <div className="field-wrapper">
+                    <label className="field-label">Género</label>
+                    <select
+                      value={student.genero}
+                      onChange={(e) => handleStudentChange(index, 'genero', e.target.value)}
+                      className="field-input"
+                    >
+                      <option value="">Seleccione un género</option>
+                      <option value="Masculino">Masculino</option>
+                      <option value="Femenino">Femenino</option>
+                    </select>
+                  </div>
                   {students.length > 1 ? (
                     <button
                       type="button"

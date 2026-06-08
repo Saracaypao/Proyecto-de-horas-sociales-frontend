@@ -44,6 +44,7 @@ export type ProjectStudentPayload = {
   carrera?: string;
   cargo?: string;
   activo?: boolean;
+  genero?: 'Masculino' | 'Femenino' | null;
   avatar?: string | null;
   email?: string | null;
 };
@@ -126,6 +127,7 @@ export type EnrollStudentPayload = {
   carrera: string;
   cargo?: string;
   activo?: boolean;
+  genero?: 'Masculino' | 'Femenino' | null;
   email?: string | null;
 };
 
@@ -274,4 +276,68 @@ export type DashboardSummaryResponse = {
 
 export function getDashboardSummary() {
   return request<DashboardSummaryResponse>('/dashboard/summary');
+}
+// ── Tipos para los nuevos endpoints del dashboard ────────────────────────────
+
+/** Req 1 — Alumnos por carrera y año: { carrera: string, '2024': number, ... } */
+export type CarreraAnioRow = { carrera: string } & Record<string, number | string>;
+
+/** Req 3 (tendencia) */
+export type TrendYearRow = { anio: string; estudiantes: number; proyectos: number };
+
+/** Req 4 — Estudiantes por municipio */
+export type EstudiantesMunicipioRow = { municipio: string; estudiantes: number };
+
+/** Req 5 — Proyectos por municipio */
+export type ProyectosMunicipioRow = { municipio: string; proyectos: number; activos: number };
+
+/** Req 6 + 7 — Métricas / tabla por institución */
+export type TablaInstitucionRow = {
+  nombreFull:  string;
+  nombre:      string;
+  tipo:        string;
+  ubicacion:   string;
+  total:       number;
+  activos:     number;
+  progreso:    number;
+  cerrados:    number;
+  estudiantes: number;
+  facultades:  number;
+};
+
+// ── Llamadas API ─────────────────────────────────────────────────────────────
+
+/** Req 1 — Alumnos en horas sociales por carrera y año */
+export function getStudentsByCarreraAndYear() {
+  return request<CarreraAnioRow[]>('/dashboard/carrera-anio');
+}
+
+/** Req 2 — Género (también disponible en summary.genderSummary) */
+export function getGenderSummaryAPI() {
+  return request<{ hombres: number; mujeres: number }>('/dashboard/genero');
+}
+
+/** Req 3 — Tendencia anual */
+export function getTrendByYear() {
+  return request<TrendYearRow[]>('/dashboard/tendencia-anual');
+}
+
+/** Req 4 — Estudiantes por municipio */
+export function getStudentsByMunicipio() {
+  return request<EstudiantesMunicipioRow[]>('/dashboard/estudiantes-municipio');
+}
+
+/** Req 5 — Proyectos por municipio */
+export function getProjectsByMunicipio() {
+  return request<ProyectosMunicipioRow[]>('/dashboard/proyectos-municipio');
+}
+
+/** Req 6 — Métricas por institución */
+export function getProjectMetricsByInstitution() {
+  return request<TablaInstitucionRow[]>('/dashboard/metricas-institucion');
+}
+
+/** Req 7 — Tabla detallada por institución */
+export function getInstitutionDetailTable() {
+  return request<TablaInstitucionRow[]>('/dashboard/tabla-institucion');
 }

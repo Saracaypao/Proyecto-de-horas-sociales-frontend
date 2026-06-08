@@ -6,7 +6,7 @@ import { clasificacionEstado, proyectosMapa, marcadoresMapa } from '../data/proy
 import type { ProyectoMapa } from '../types';
 import { getMapMarkers, getProjects, type ProjectDetailResponse } from '../services/api';
 import { countGenders } from '../utils/genderDetect';
-import 'leaflet/dist/leaflet-src.js';
+import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 function normalizeVisibleStatus(estado?: string | null, status?: string | null): ProyectoMapa['estado'] {
@@ -14,9 +14,6 @@ function normalizeVisibleStatus(estado?: string | null, status?: string | null):
   if (status === 'Activo' || estado === 'Activo') return 'Activo';
   return 'En progreso';
 }
-
-// Note: this page now uses Leaflet. Install the dependency with:
-//   npm install leaflet
 
 export default function MapaVistaPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -28,7 +25,6 @@ export default function MapaVistaPage() {
   const proyectoSeleccionado = projects.find((p) => String(p.id) === proyectoId) ?? projects[0];
   const mostrarDetalle = searchParams.has('proyecto');
 
-  // Función para obtener datos de hombres y mujeres para un proyecto
   const getGeneroData = (projectId: string) => {
     const marcadores = markers.filter((m) => String(m.id) === projectId);
     let totalHombres = 0;
@@ -37,7 +33,6 @@ export default function MapaVistaPage() {
       totalHombres += m.hombres;
       totalMujeres += m.mujeres;
     });
-    // If no marker data, derive from equipo names
     if (totalHombres === 0 && totalMujeres === 0) {
       const project = projects.find((p) => String(p.id) === projectId);
       if (project && project.equipo.length > 0) {
@@ -52,8 +47,6 @@ export default function MapaVistaPage() {
 
   const mapRef = useRef<any>(null);
   const markersLayerRef = useRef<any>(null);
-
-  const getLeaflet = () => (window as any).leaflet;
 
   useEffect(() => {
     let active = true;
@@ -107,7 +100,6 @@ export default function MapaVistaPage() {
     };
   }, []);
 
-  // Fetch full project detail when selecting a project on the map
   useEffect(() => {
     if (!mostrarDetalle || !proyectoId) {
       setProjectDetail(null);
@@ -124,7 +116,6 @@ export default function MapaVistaPage() {
 
   // Inicializar mapa Leaflet una sola vez
   useEffect(() => {
-    const L = getLeaflet();
     if (!L?.map) return;
 
     const map = L.map('leaflet-map', {
@@ -154,23 +145,19 @@ export default function MapaVistaPage() {
 
   // Actualizar marcadores y centrar/zoom cuando cambie el proyecto seleccionado
   useEffect(() => {
-    const L = getLeaflet();
     const map = mapRef.current;
     if (!map || !L?.layerGroup) return;
 
-    // limpiar capa de marcadores
     if (markersLayerRef.current) {
       markersLayerRef.current.clearLayers();
     } else {
       markersLayerRef.current = L.layerGroup().addTo(map);
     }
 
-    // seleccionar marcadores a mostrar
     const markersToShow = mostrarDetalle && proyectoSeleccionado
       ? markers.filter((m) => String(m.id) === String(proyectoSeleccionado.id))
       : markers;
 
-    // Agrupar marcadores por proyecto (id) y mostrar una sola tarjeta con totales
     const groups: Record<string, { latSum: number; lngSum: number; hombres: number; mujeres: number; count: number }> = {};
     markersToShow.forEach((m) => {
       if (!groups[m.id]) {
@@ -202,7 +189,6 @@ export default function MapaVistaPage() {
       L.marker([avgLat, avgLng], { icon }).addTo(markersLayerRef.current);
     });
 
-    // centrar/zoom si se muestra detalle
     if (mostrarDetalle) {
       const pts = markersToShow.map((m) => [m.lat, m.lng]);
       if (pts.length === 1) {
@@ -230,18 +216,17 @@ export default function MapaVistaPage() {
                 const generoData = getGeneroData(String(project.id));
                 return (
                   <article className="project-summary-card" key={project.id}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                        <div className={`pill status ${clasificacionEstado[project.estado]}`}>{project.estado}</div>
-                        <p className="muted with-icon" style={{ margin: 0, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                          <MapPinned size={12} />
-                          {project.ubicacion}
-                        </p>
-                      </div>
-                  <div className="project-summary-topline">{project.institucion}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                      <div className={`pill status ${clasificacionEstado[project.estado]}`}>{project.estado}</div>
+                      <p className="muted with-icon" style={{ margin: 0, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        <MapPinned size={12} />
+                        {project.ubicacion}
+                      </p>
+                    </div>
+                    <div className="project-summary-topline">{project.institucion}</div>
                     <h3>{project.titulo}</h3>
                     <p className="summary-copy">{project.resumen}</p>
-                    
-                    {/* Mostrar género stats */}
+
                     <div className="gender-stats" style={{ display: 'flex', gap: '16px', marginTop: '12px', marginBottom: '12px', fontSize: '13px' }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#007bff' }} />
@@ -252,7 +237,7 @@ export default function MapaVistaPage() {
                         Mujeres: {generoData.mujeres}
                       </span>
                     </div>
-                    
+
                     <div className="avatar-row">
                       <AvatarGroup count={project.personas} />
                       <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -288,9 +273,8 @@ export default function MapaVistaPage() {
           </div>
         </div>
         <div className={`map-scene ${mostrarDetalle ? 'focused' : ''}`} style={{ transformOrigin: focoMapa, position: 'relative' }}>
-          {/* Leaflet map container (replaces iframe) */}
           <div id="leaflet-map" className="map-iframe" style={{ position: 'absolute', inset: 0 }} />
-          
+
           <div className="map-reset-floating">
             <button className="secondary-btn" type="button" onClick={() => setSearchParams({})}>
               <ChevronLeft size={18} />
@@ -323,7 +307,6 @@ function ProjectMapDetail({
     return new Intl.DateTimeFormat('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }).format(date);
   };
 
-  // Compute gender from detail students/equipo if available
   const allNames = projectDetail
     ? [
         ...(projectDetail.estudiantes ?? []).map((s) => s.nombre ?? ''),
@@ -369,7 +352,6 @@ function ProjectMapDetail({
               </p>
             </div>
 
-            {/* Gender stats */}
             <div style={{ backgroundColor: '#f5f5f5', padding: '12px 16px', borderRadius: '8px', marginTop: '16px', marginBottom: '16px' }}>
               <p style={{ fontSize: '13px', fontWeight: '600', marginBottom: '8px', color: '#333' }}>Estudiantes</p>
               <div style={{ display: 'flex', gap: '20px' }}>

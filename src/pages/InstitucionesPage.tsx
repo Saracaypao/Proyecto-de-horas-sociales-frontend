@@ -49,7 +49,7 @@ export function InstitucionesPage() {
             tipo: institution.tipo ?? null,
             ubicacion: institution.ubicacion,
             image: institution.image ?? null,
-              totalProyectosActivos: institution.proyectos.filter((project) => project.estado === 'Activo').length,
+            totalProyectosActivos: institution.proyectos.filter((project) => project.estado === 'Activo').length,
             totalEstudiantesAsignados: Number(
               institution.estadisticas.find(([, label]) => label.toLowerCase().includes('estudiantes'))?.[0] ?? 0
             ),
@@ -348,7 +348,35 @@ export function InstitucionDetallePage() {
       <section className="institution-hero">
         <div className="checker-bg" />
         <div className="institution-header-row">
-          <div className="floating-logo" />
+          {/* CORRECCIÓN: muestra la imagen si existe, o la inicial del nombre como fallback */}
+          {institution.image ? (
+            <img
+              src={institution.image}
+              alt={institution.nombre}
+              className="floating-logo"
+              style={{ objectFit: 'cover' }}
+              onError={(e) => {
+                const target = e.currentTarget;
+                target.style.display = 'none';
+                const fallback = target.nextElementSibling as HTMLElement | null;
+                if (fallback) fallback.style.display = 'grid';
+              }}
+            />
+          ) : null}
+          <div
+            className="floating-logo"
+            style={{
+              display: institution.image ? 'none' : 'grid',
+              background: 'linear-gradient(135deg, #3b72f1, #21c08a)',
+              placeItems: 'center',
+              color: 'white',
+              fontSize: '2rem',
+              fontWeight: 900,
+            }}
+          >
+            {institution.nombre.charAt(0).toUpperCase()}
+          </div>
+
           <div className="institution-meta">
             <span className="eyebrow-tag">Universidad destacada</span>
             <span className="muted">{institution.ubicacion}</span>

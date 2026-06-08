@@ -16,6 +16,7 @@ type StudentDraft = {
   nombre?: unknown;
   carnet?: unknown;
   carrera?: unknown;
+  genero?: unknown;
   avatar?: unknown;
   email?: unknown;
 };
@@ -101,6 +102,7 @@ function collectStudents(body: Record<string, unknown>) {
       nombre: normalizeText((student as StudentDraft).nombre),
       carnet: normalizeText((student as StudentDraft).carnet),
       carrera: normalizeText((student as StudentDraft).carrera),
+      genero:  normalizeText((student as StudentDraft).genero) || null,
       avatar: normalizeText((student as StudentDraft).avatar) || null,
       email: normalizeText((student as StudentDraft).email) || null,
     }))
@@ -187,7 +189,7 @@ function sumMarkerValues(markers: Array<{ hombres?: number; mujeres?: number }>)
 
 function toProjectDetailDTO(
   project: any,
-  enrollments: Array<{ nombre?: string; carnet?: string; carrera?: string; avatar?: string | null; email?: string | null }>
+  enrollments: Array<{ nombre?: string; carnet?: string; carrera?: string; genero?: 'Masculino' | 'Femenino' | null; avatar?: string | null; email?: string | null }>
 ) {
   const plain = typeof project.get === 'function' ? project.get({ plain: true }) : project;
   const base = toProjectDTO(plain);
@@ -418,6 +420,7 @@ class ProjectsService {
       nombre: (enrollment.get('student') as any)?.nombre,
       carnet: (enrollment.get('student') as any)?.carnet,
       carrera: (enrollment.get('student') as any)?.carrera,
+      genero: (enrollment.get('student') as any)?.genero,
       avatar: (enrollment.get('student') as any)?.avatar,
       email: (enrollment.get('student') as any)?.email,
     }));
@@ -503,6 +506,7 @@ class ProjectsService {
             nombre: studentDraft.nombre,
             carnet: studentDraft.carnet,
             carrera: studentDraft.carrera || careers[0] || '',
+            genero:  (studentDraft.genero as 'Masculino' | 'Femenino') || null,
             avatar: studentDraft.avatar,
             email: studentDraft.email,
           },
@@ -544,6 +548,7 @@ class ProjectsService {
           nombre: String(body.nombre),
           carnet: String(body.carnet),
           carrera: String(body.carrera),
+          genero:  (body.genero === 'Masculino' || body.genero === 'Femenino') ? body.genero : null,
           avatar: typeof body.avatar === 'string' ? body.avatar : null,
           email: typeof body.email === 'string' ? body.email : null,
         },

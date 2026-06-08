@@ -6,18 +6,20 @@ export interface StudentAttributes {
   nombre: string;
   carnet: string;
   carrera: string;
+  genero?: 'Masculino' | 'Femenino' | null;
   avatar?: string | null;
   email?: string | null;
   created_at?: Date;
 }
 
-export interface StudentCreationAttributes extends Optional<StudentAttributes, 'id' | 'avatar' | 'email' | 'created_at'> {}
+export interface StudentCreationAttributes extends Optional<StudentAttributes, 'id' | 'genero' | 'avatar' | 'email' | 'created_at'> {}
 
 class Student extends Model<StudentAttributes, StudentCreationAttributes> implements StudentAttributes {
   declare id: string;
   declare nombre: string;
   declare carnet: string;
   declare carrera: string;
+  declare genero: 'Masculino' | 'Femenino' | null;
   declare avatar: string | null;
   declare email: string | null;
   declare created_at: Date;
@@ -52,6 +54,10 @@ Student.init(
     carrera: {
       type: DataTypes.TEXT,
       allowNull: false,
+    },
+    genero: {
+      type: DataTypes.TEXT,
+      allowNull: true,
     },
     avatar: {
       type: DataTypes.TEXT,

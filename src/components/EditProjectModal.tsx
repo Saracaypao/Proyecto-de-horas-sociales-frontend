@@ -130,8 +130,8 @@ export default function EditProjectModal({
             <Field label="Carreras que pueden aplicar" placeholder="Ej. Ingeniería en Sistemas, Arquitectura" icon={<Layers3 size={18} />} value={careers} onChange={(e) => setCareers(e.target.value)} textarea required />
             <Field label="Nombre del proyecto" placeholder="Ej. Campaña de salud comunitaria" icon={<Plus size={18} />} value={title} onChange={(e) => setTitle(e.target.value)} required />
             <Field label="Ubicación" placeholder="Municipio / departamento" icon={<MapPinned size={18} />} value={location} onChange={(e) => setLocation(e.target.value)} required />
-            <Field label="Fecha de inicio" type="date" icon={<CalendarDays size={18} />} value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-            <Field label="Fecha de cierre" type="date" icon={<CalendarDays size={18} />} value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+            <Field label="Fecha de inicio"  placeholder="" type="date" icon={<CalendarDays size={18} />} value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            <Field label="Fecha de cierre" placeholder="" type="date" icon={<CalendarDays size={18} />} value={endDate}   onChange={(e) => setEndDate(e.target.value)} />
             <Field label="Cupos del proyecto" placeholder="Ej. 5" type="number" value={slots} onChange={(e) => setSlots(e.target.value)} />
           </div>
 

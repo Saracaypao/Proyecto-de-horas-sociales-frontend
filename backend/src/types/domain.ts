@@ -41,6 +41,7 @@ export type StudentSummary = {
   nombre: string;
   carnet: string;
   carrera: string;
+  genero: 'Masculino' | 'Femenino' | null;
   avatar: string | null;
   email: string | null;
 };

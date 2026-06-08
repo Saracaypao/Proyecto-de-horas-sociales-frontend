@@ -159,6 +159,9 @@ const controller = new ProjectsController();
  *                       type: string
  *                     carrera:
  *                       type: string
+ *                     genero:
+ *                       type: string
+ *                       enum: [Masculino, Femenino]
  *                     email:
  *                       type: string
  *     responses:
@@ -210,18 +213,18 @@ router.post(
 		'institutionLocation',
 		'institutionDescription',
 		'institutionImage',
-			'facultad',
-                'carreras',
-                'titulo',
-                'ubicacion',
-                'fechaInicio',
-                'fechaCierre',
-                'cupos',
-                'descripcion',
-                'image',
-		]),
-		controller.createProject
-	);
+		'facultad',
+		'carreras',
+		'titulo',
+		'ubicacion',
+		'fechaInicio',
+		'fechaCierre',
+		'cupos',
+		'descripcion',
+		'image',
+	]),
+	controller.createProject
+);
 /**
  * @swagger
  * /api/projects/{id}:
@@ -289,6 +292,10 @@ router.post(
  *                         type: string
  *                       avatar:
  *                         type: string
+ *                         nullable: true
+ *                       genero:
+ *                         type: string
+ *                         enum: [Masculino, Femenino]
  *                         nullable: true
  *                       email:
  *                         type: string
@@ -429,6 +436,9 @@ router.get('/:id/enrollments', controller.listProjectEnrollments);
  *                 type: string
  *               carrera:
  *                 type: string
+ *               genero:
+ *                 type: string
+ *                 enum: [Masculino, Femenino]
  *               email:
  *                 type: string
  *     responses:

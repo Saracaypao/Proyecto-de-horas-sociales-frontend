@@ -6,7 +6,7 @@ const backendTarget = process.env.VITE_BACKEND_URL ?? 'http://localhost:4000';
 export default defineConfig({
   plugins: [react()],
   optimizeDeps: {
-    exclude: ['leaflet'],
+    include: ['leaflet'],
   },
   server: {
     proxy: {

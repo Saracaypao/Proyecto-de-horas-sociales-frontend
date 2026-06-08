@@ -18,6 +18,7 @@ export default function InscribirEstudianteModal({
   const [carnet, setCarnet] = useState('');
   const [career, setCareer] = useState('');
   const [email, setEmail] = useState('');
+  const [gender, setGender] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,9 +32,9 @@ export default function InscribirEstudianteModal({
         nombre: name,
         carnet,
         carrera: career,
+        genero: gender || undefined,
         email: email || undefined,
       });
-      // notify caller with updated project (if backend returned it)
       try { onEnrolled?.(resp?.project ?? resp); } catch {}
       onClose();
     } catch (submitError) {
@@ -66,6 +67,18 @@ export default function InscribirEstudianteModal({
           <Field label="Carnet" placeholder="Ej. 20230045" icon={<CreditCard size={18} />} value={carnet} onChange={(event) => setCarnet(event.target.value)} />
           <Field label="Carrera" placeholder="Ej. Ingeniería en Sistemas" icon={<GraduationCap size={18} />} value={career} onChange={(event) => setCareer(event.target.value)} />
           <Field label="Email (opcional)" placeholder="estudiante@ejemplo.edu.sv" icon={<UserRound size={18} />} value={email} onChange={(event) => setEmail(event.target.value)} />
+          <div className="field-wrapper">
+            <label className="field-label">Género</label>
+            <select
+              value={gender}
+              onChange={(e) => setGender(e.target.value)}
+              className="field-input"
+            >
+              <option value="">Seleccione un género</option>
+              <option value="Masculino">Masculino</option>
+              <option value="Femenino">Femenino</option>
+            </select>
+          </div>
         </div>
 
         {error ? <p className="modal-error">{error}</p> : null}

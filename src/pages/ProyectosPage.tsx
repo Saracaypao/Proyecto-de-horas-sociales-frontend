@@ -15,7 +15,6 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import InscribirEstudianteModal from '../components/InscribirEstudianteModal';
 import CreateProjectModal from '../components/CreateProjectModal';
 import EditProjectModal from '../components/EditProjectModal/index';
-import { countGenders } from '../utils/genderDetect';
 import { FACULTY_FILTERS, facultyMatchesProject, resolveFacultyFromCareers, type FacultyFilter } from '../utils/faculties';
 import { ProjectListCard } from '../components/ProjectCards';
 import { BackLink, FilterGroup } from '../components/ui';
@@ -98,7 +97,6 @@ function findLocalProjectDetail(projectId: string) {
       return mapLocalProjectToDetail(project);
     }
   }
-
   return null;
 }
 
@@ -106,10 +104,7 @@ function findLocalProjectDetail(projectId: string) {
 export function ProyectosPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const modalNuevo = searchParams.get('nuevo') === '1';
-  const [projectToEnroll, setProjectToEnroll] = useState<{
-    id: string;
-    titulo: string;
-  } | null>(null);
+  const [projectToEnroll, setProjectToEnroll] = useState<{ id: string; titulo: string } | null>(null);
   const [selectedFaculty, setSelectedFaculty] = useState('Todas las facultades');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('Todos');
@@ -121,52 +116,46 @@ export function ProyectosPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Fetch helper moved to component scope so it can be called after enrollments
+  const mapStatus = (status?: string, estado?: string): Proyecto['estado'] => {
+    if (estado === 'En planificación') return 'En progreso';
+    if (status === 'Cerrado' || estado === 'Cerrado') return 'Cerrado';
+    if (status === 'Activo' || estado === 'Activo') return 'Activo';
+    return 'En progreso';
+  };
+
+  const mapProject = (project: ProjectListResponse): Proyecto => ({
+    id: String(project.id),
+    institucion: project.institution ?? 'Institución',
+    titulo: project.titulo,
+    ubicacion: project.ubicacion,
+    estado: mapStatus(project.status, project.estado),
+    imagen: (project as any).imagen ?? (project as any).image ?? (project as any).imageUrl ?? null,
+    facultad: resolveFacultyFromCareers(project.carreras ?? [], (project as any).facultad ?? null),
+    carreras: project.carreras ?? [],
+    descripcion: project.descripcion ?? '',
+    equipo: project.equipo ?? [],
+    cuposTexto: project.cuposTexto,
+    cuposOcupados: project.cuposOcupados,
+    cuposTotales: project.cuposTotales,
+  });
+
   async function fetchProjects() {
-    let active = true;
-    const mapStatus = (status?: string, estado?: string): Proyecto['estado'] => {
-      if (estado === 'En planificación') return 'En progreso';
-      if (status === 'Cerrado' || estado === 'Cerrado') return 'Cerrado';
-      if (status === 'Activo' || estado === 'Activo') return 'Activo';
-      return 'En progreso';
-    };
-
-    const mapProject = (project: ProjectListResponse): Proyecto => ({
-      id: String(project.id),
-      institucion: project.institution ?? 'Institución',
-      titulo: project.titulo,
-      ubicacion: project.ubicacion,
-      estado: mapStatus(project.status, project.estado),
-      imagen: (project as any).imagen ?? (project as any).image ?? (project as any).imageUrl ?? null,
-      facultad: resolveFacultyFromCareers(project.carreras ?? [], (project as any).facultad ?? null),
-      carreras: project.carreras ?? [],
-      descripcion: project.descripcion ?? '',
-      equipo: project.equipo ?? [],
-      cuposTexto: project.cuposTexto,
-      cuposOcupados: project.cuposOcupados,
-      cuposTotales: project.cuposTotales,
-    });
-
     try {
       setLoading(true);
       setError('');
       const apiProjects = await getProjects();
-      if (!active) return;
       setProjectsData(apiProjects.map(mapProject));
     } catch {
-      if (!active) return;
       setError('No se pudo conectar con el backend. Mostrando datos de respaldo.');
       setProjectsData(instituciones.flatMap((institution) => institution.proyectos));
     } finally {
-      if (active) setLoading(false);
+      setLoading(false);
     }
   }
 
-  // Fetch and update a single project by id, merge into projectsData
   async function fetchProjectById(projectId: string) {
     try {
       const detail = await getProjectById(projectId);
-      // map ProjectDetailResponse -> Proyecto (same fields used by list)
       const mapped: Proyecto = {
         id: String(detail.id),
         institucion: detail.institution ?? 'Institución',
@@ -181,45 +170,14 @@ export function ProyectosPage() {
         cuposOcupados: detail.cuposOcupados ?? undefined,
         cuposTotales: detail.cuposTotales ?? null,
       };
-
       setProjectsData((prev) => prev.map((p) => (String(p.id) === String(projectId) ? mapped : p)));
-    } catch (err) {
-      // if fetch fails, fall back to full reload
+    } catch {
       void fetchProjects();
     }
   }
 
-  // (removed duplicate resolveProjectImage here — module-scope helper above is used)
-
   useEffect(() => {
-    let active = true;
-
-    const mapStatus = (status?: string, estado?: string): Proyecto['estado'] => {
-      if (estado === 'En planificación') return 'En progreso';
-      if (status === 'Cerrado' || estado === 'Cerrado') return 'Cerrado';
-      if (status === 'Activo' || estado === 'Activo') return 'Activo';
-      return 'En progreso';
-    };
-
-    const mapProject = (project: ProjectListResponse): Proyecto => ({
-      id: String(project.id),
-      institucion: project.institution ?? 'Institución',
-      titulo: project.titulo,
-      ubicacion: project.ubicacion,
-      estado: mapStatus(project.status, project.estado),
-      imagen: (project as any).imagen ?? (project as any).image ?? (project as any).imageUrl ?? null,
-      facultad: resolveFacultyFromCareers(project.carreras ?? [], (project as any).facultad ?? null),
-      carreras: project.carreras ?? [],
-      descripcion: project.descripcion ?? '',
-      equipo: project.equipo ?? [],
-      cuposTexto: project.cuposTexto,
-      cuposOcupados: project.cuposOcupados,
-      cuposTotales: project.cuposTotales,
-    });
-
-    // initial load: call the component-scoped fetchProjects
-    fetchProjects();
-    return () => { active = false; };
+    void fetchProjects();
   }, []);
 
   const statusOptions = ['Todos', 'Activo', 'En progreso', 'Cerrado'];
@@ -235,7 +193,7 @@ export function ProyectosPage() {
     .filter((project) => {
       const query = searchQuery.trim().toLowerCase();
       const matchesQuery = !query || project.titulo.toLowerCase().includes(query);
-        const matchesFaculty = facultyMatchesProject(selectedFaculty as FacultyFilter, project.facultad, project.carreras);
+      const matchesFaculty = facultyMatchesProject(selectedFaculty as FacultyFilter, project.facultad, project.carreras);
       const projectVisibleStatus =
         project.estado === 'Cerrado' ? 'Cerrado' : project.estado === 'Activo' ? 'Activo' : 'En progreso';
       const matchesStatus = selectedStatus === 'Todos' || projectVisibleStatus === selectedStatus;
@@ -290,18 +248,8 @@ export function ProyectosPage() {
 
       <div className="content-split">
         <aside className="filter-rail">
-          <FilterGroup
-            title="Estado"
-            options={statusOptions}
-            selected={selectedStatus}
-            onChange={setSelectedStatus}
-          />
-          <FilterGroup
-            title="Ubicación"
-            options={locationOptions}
-            selected={selectedLocation}
-            onChange={setSelectedLocation}
-          />
+          <FilterGroup title="Estado" options={statusOptions} selected={selectedStatus} onChange={setSelectedStatus} />
+          <FilterGroup title="Ubicación" options={locationOptions} selected={selectedLocation} onChange={setSelectedLocation} />
         </aside>
 
         <section className="list-panel">
@@ -332,18 +280,18 @@ export function ProyectosPage() {
           projectId={projectToEnroll.id}
           projectTitle={projectToEnroll.titulo}
           onClose={() => setProjectToEnroll(null)}
-            onEnrolled={(updated) => {
-              if (updated) {
-                try {
-                  const mapped = mapDetailToProyecto(updated);
-                  setProjectsData((prev) => prev.map((p) => (String(p.id) === String(mapped.id) ? mapped : p)));
-                } catch {
-                  void fetchProjectById(projectToEnroll.id);
-                }
-              } else {
+          onEnrolled={(updated) => {
+            if (updated) {
+              try {
+                const mapped = mapDetailToProyecto(updated);
+                setProjectsData((prev) => prev.map((p) => (String(p.id) === String(mapped.id) ? mapped : p)));
+              } catch {
                 void fetchProjectById(projectToEnroll.id);
               }
-            }}
+            } else {
+              void fetchProjectById(projectToEnroll.id);
+            }
+          }}
         />
       ) : null}
     </div>
@@ -483,14 +431,17 @@ export function ProyectoDetallePage() {
   const cuposTotales = project.cuposTotales ?? null;
   const cuposDisponibles = cuposTotales != null ? Math.max(cuposTotales - cuposOcupados, 0) : null;
 
-  // Gender count derived from names
-  const allNames = [
-    ...(project.estudiantes ?? []).map((s) => s.nombre ?? ''),
-    ...(project.equipo ?? []),
-  ].filter(Boolean);
-  const genderCounts = countGenders(allNames);
-  const hombres = project.hombres != null ? project.hombres : genderCounts.hombres;
-  const mujeres = project.mujeres != null ? project.mujeres : genderCounts.mujeres;
+  // Conteo de género: usa el campo genero real si existe, si no usa hombres/mujeres del backend
+  const estudiantesConGenero = (project.estudiantes ?? []).filter(
+    (s: any) => s.genero === 'Masculino' || s.genero === 'Femenino'
+  );
+  const tieneGenerosReales = estudiantesConGenero.length > 0;
+  const hombres = tieneGenerosReales
+    ? (project.estudiantes ?? []).filter((s: any) => s.genero === 'Masculino').length
+    : (project.hombres ?? 0);
+  const mujeres = tieneGenerosReales
+    ? (project.estudiantes ?? []).filter((s: any) => s.genero === 'Femenino').length
+    : (project.mujeres ?? 0);
 
   return (
     <div className="detail-page wide-page" style={{ paddingBottom: 64 }}>
@@ -557,7 +508,6 @@ export function ProyectoDetallePage() {
           background: 'linear-gradient(135deg, #1a2f6e 0%, #2f68ec 60%, #21c08a 100%)',
         }}
       >
-        {/* Cover image overlay: siempre reservar espacio; usar placeholder si no hay imagen */}
         <img
           src={resolveProjectImage(project) ?? '/images/ProjectsDirectoryDetailedView.jpeg'}
           alt={project.nombre}
@@ -573,7 +523,6 @@ export function ProyectoDetallePage() {
           }}
         />
 
-        {/* Hero content */}
         <div
           style={{
             position: 'relative',
@@ -663,8 +612,7 @@ export function ProyectoDetallePage() {
               boxShadow: '0 16px 28px rgba(0,0,0,0.14)',
             }}
           >
-              {/* Attempt to show image; if it fails the onError hides the img and the placeholder below remains visible */}
-              <>
+            <>
               <img
                 src={resolveProjectImage(project) ?? ''}
                 alt={project.nombre}
@@ -686,12 +634,7 @@ export function ProyectoDetallePage() {
 
       {/* Body: two-column layout */}
       <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 300px',
-          gap: 24,
-          alignItems: 'start',
-        }}
+        style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 24, alignItems: 'start' }}
         className="project-detail-body"
       >
         {/* Main column */}
@@ -713,7 +656,6 @@ export function ProyectoDetallePage() {
               {project.resumen ?? project.descripcion}
             </p>
 
-            {/* Carreras */}
             {project.carreras.length > 0 ? (
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
@@ -763,13 +705,7 @@ export function ProyectoDetallePage() {
               </span>
             </div>
 
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-                gap: 10,
-              }}
-            >
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10 }}>
               {project.estudiantes && project.estudiantes.length > 0
                 ? project.estudiantes.map((student) => {
                   const initials = (student.nombre ?? '')
@@ -791,7 +727,6 @@ export function ProyectoDetallePage() {
                         border: '1px solid #e8edf8',
                       }}
                     >
-                      {/* Nombre + iniciales */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                         <div
                           style={{
@@ -809,37 +744,24 @@ export function ProyectoDetallePage() {
                         >
                           {initials}
                         </div>
-                        <p style={{
-                          margin: 0,
-                          fontSize: '0.88rem',
-                          fontWeight: 700,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          color: '#1c2433',
-                        }}>
+                        <p style={{ margin: 0, fontSize: '0.88rem', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#1c2433' }}>
                           {student.nombre}
                         </p>
                       </div>
-
-                      {/* Línea divisora */}
                       <div style={{ height: 1, background: '#e8edf8', marginBottom: 8 }} />
-
-                      {/* Datos */}
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                         {student.carrera ? (
-                          <p style={{ margin: 0, fontSize: '0.76rem', color: '#687182', fontWeight: 600 }}>
-                            {student.carrera}
-                          </p>
+                          <p style={{ margin: 0, fontSize: '0.76rem', color: '#687182', fontWeight: 600 }}>{student.carrera}</p>
                         ) : null}
                         {student.carnet ? (
-                          <p style={{ margin: 0, fontSize: '0.73rem', color: '#9aa3b5' }}>
-                            Carnet: {student.carnet}
-                          </p>
+                          <p style={{ margin: 0, fontSize: '0.73rem', color: '#9aa3b5' }}>Carnet: {student.carnet}</p>
                         ) : null}
                         {student.email ? (
-                          <p style={{ margin: 0, fontSize: '0.70rem', color: '#9aa3b5', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {student.email}
+                          <p style={{ margin: 0, fontSize: '0.70rem', color: '#9aa3b5', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{student.email}</p>
+                        ) : null}
+                        {(student as any).genero ? (
+                          <p style={{ margin: 0, fontSize: '0.73rem', color: '#9aa3b5' }}>
+                            Género: {(student as any).genero}
                           </p>
                         ) : null}
                       </div>
@@ -848,12 +770,7 @@ export function ProyectoDetallePage() {
                 })
                 : project.equipo && project.equipo.length > 0
                   ? project.equipo.map((name) => {
-                    const initials = name
-                      .split(' ')
-                      .map((w) => w[0])
-                      .join('')
-                      .substring(0, 2)
-                      .toUpperCase();
+                    const initials = name.split(' ').map((w) => w[0]).join('').substring(0, 2).toUpperCase();
                     return (
                       <div
                         key={name}
@@ -890,16 +807,14 @@ export function ProyectoDetallePage() {
                       </div>
                     );
                   })
-                  : (
-                    <p className="muted" style={{ gridColumn: '1 / -1' }}>No hay información del equipo.</p>
-                  )}
+                  : <p className="muted" style={{ gridColumn: '1 / -1' }}>No hay información del equipo.</p>
+              }
             </div>
           </section>
         </div>
 
         {/* Sidebar */}
         <aside style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* Stats card */}
           <div
             style={{
               background: 'white',
@@ -916,27 +831,13 @@ export function ProyectoDetallePage() {
               Ficha rápida
             </h3>
 
-            <StatCard
-              icon={<UserCheck size={16} />}
-              label="Estudiantes asignados"
-              value={project.estudiantesAsignados ?? project.estudiantes.length}
-              accent
-            />
+            <StatCard icon={<UserCheck size={16} />} label="Estudiantes asignados" value={project.estudiantesAsignados ?? project.estudiantes.length} accent />
 
             {cuposTotales != null ? (
-              <div
-                style={{
-                  padding: '14px 16px',
-                  borderRadius: 12,
-                  background: '#f8faff',
-                  border: '1px solid #e5eaf5',
-                }}
-              >
+              <div style={{ padding: '14px 16px', borderRadius: 12, background: '#f8faff', border: '1px solid #e5eaf5' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                   <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#9aa3b5', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Cupos</span>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1c2433' }}>
-                    {cuposOcupados} / {cuposTotales}
-                  </span>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1c2433' }}>{cuposOcupados} / {cuposTotales}</span>
                 </div>
                 <div style={{ height: 6, borderRadius: 999, background: '#e9edf5', overflow: 'hidden' }}>
                   <div
@@ -961,17 +862,7 @@ export function ProyectoDetallePage() {
             <StatCard icon={<TrendingUp size={16} />} label="Hombres" value={hombres} />
             <StatCard icon={<TrendingUp size={16} />} label="Mujeres" value={mujeres} />
 
-            <div
-              style={{
-                padding: '14px 16px',
-                borderRadius: 12,
-                background: '#f8faff',
-                border: '1px solid #e5eaf5',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 10,
-              }}
-            >
+            <div style={{ padding: '14px 16px', borderRadius: 12, background: '#f8faff', border: '1px solid #e5eaf5', display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
                 <span style={{ fontSize: '0.78rem', color: '#9aa3b5', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                   Estado del proyecto
@@ -983,15 +874,7 @@ export function ProyectoDetallePage() {
               <select
                 value={statusDraft}
                 onChange={(e) => setStatusDraft(e.target.value as VisibleProjectStatus)}
-                style={{
-                  width: '100%',
-                  borderRadius: 10,
-                  border: '1px solid #d8deea',
-                  padding: '10px 12px',
-                  fontSize: '0.9rem',
-                  color: '#1c2433',
-                  background: 'white',
-                }}
+                style={{ width: '100%', borderRadius: 10, border: '1px solid #d8deea', padding: '10px 12px', fontSize: '0.9rem', color: '#1c2433', background: 'white' }}
               >
                 <option value="Activo">Activo</option>
                 <option value="En progreso">En progreso</option>
@@ -1017,17 +900,7 @@ export function ProyectoDetallePage() {
               </button>
             </div>
 
-            <div
-              style={{
-                padding: '14px 16px',
-                borderRadius: 12,
-                background: '#f8faff',
-                border: '1px solid #e5eaf5',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 10,
-              }}
-            >
+            <div style={{ padding: '14px 16px', borderRadius: 12, background: '#f8faff', border: '1px solid #e5eaf5', display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: '0.78rem', color: '#9aa3b5', fontWeight: 600 }}>Inicio</span>
                 <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#1c2433' }}>{formatDate(project.fechaInicio)}</span>
@@ -1040,7 +913,6 @@ export function ProyectoDetallePage() {
             </div>
           </div>
 
-          {/* Institution link */}
           <div
             style={{
               background: 'white',
@@ -1058,14 +930,7 @@ export function ProyectoDetallePage() {
             </p>
             <Link
               to="/instituciones"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 4,
-                fontSize: '0.8rem',
-                fontWeight: 700,
-                color: '#2f68ec',
-              }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', fontWeight: 700, color: '#2f68ec' }}
             >
               Ver en directorio <ChevronRight size={13} />
             </Link>
