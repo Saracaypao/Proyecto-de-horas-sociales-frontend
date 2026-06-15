@@ -4,10 +4,12 @@ import { useEffect, useRef, useState } from 'react';
 import { AvatarGroup } from '../components/ui';
 import { clasificacionEstado, proyectosMapa, marcadoresMapa } from '../data/proyectos';
 import type { ProyectoMapa } from '../types';
-import { getMapMarkers, getProjects, type ProjectDetailResponse } from '../services/api';
+import { getMapMarkers, getProjects, getGenderByMunicipio, type ProjectDetailResponse } from '../services/api';
 import { countGenders } from '../utils/genderDetect';
+import { coordenadasDepartamentos } from '../data/departamentos';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+
 
 function normalizeVisibleStatus(estado?: string | null, status?: string | null): ProyectoMapa['estado'] {
   if (status === 'Cerrado' || estado === 'Cerrado') return 'Cerrado';
@@ -26,7 +28,7 @@ export default function MapaVistaPage() {
   const mostrarDetalle = searchParams.has('proyecto');
 
   const getGeneroData = (projectId: string) => {
-    const marcadores = markers.filter((m) => String(m.id) === projectId);
+  const marcadores = markers.filter((m) => m.id !== null && String(m.id) === projectId);
     let totalHombres = 0;
     let totalMujeres = 0;
     marcadores.forEach((m) => {
@@ -55,7 +57,11 @@ export default function MapaVistaPage() {
       try {
         setLoadingData(true);
 
-        const [apiProjects, apiMarkers] = await Promise.all([getProjects(), getMapMarkers()]);
+        const [apiProjects, apiMarkers, apiGeneroMunicipio] = await Promise.all([
+          getProjects(),
+          getMapMarkers(),
+          getGenderByMunicipio(),
+        ]);
         if (!active) return;
 
         const mappedProjects: ProyectoMapa[] = apiProjects.map((project) => ({
@@ -71,16 +77,37 @@ export default function MapaVistaPage() {
           personas: Number(project.personas ?? (project.equipo?.length ?? 0)),
         }));
 
-        const mappedMarkers = apiMarkers
-          .filter((marker) => marker.projectId !== null)
-          .map((marker) => ({
-            id: String(marker.projectId),
-            label: marker.label,
-            hombres: Number(marker.hombres ?? 0),
-            mujeres: Number(marker.mujeres ?? 0),
-            lat: Number(marker.lat),
-            lng: Number(marker.lng),
-          }));
+// Marcadores ligados a proyectos específicos (tabla map_markers, si existe)
+          const projectMarkers = apiMarkers
+            .filter((marker) => marker.projectId !== null)
+            .map((marker) => ({
+              id: String(marker.id),
+              projectId: String(marker.projectId),
+              label: marker.label,
+              hombres: Number(marker.hombres ?? 0),
+              mujeres: Number(marker.mujeres ?? 0),
+              lat: Number(marker.lat),
+              lng: Number(marker.lng),
+            }));
+
+          // Marcadores por departamento, calculados dinámicamente desde la BD
+          const departmentMarkers = apiGeneroMunicipio
+            .map((row) => {
+              const coords = coordenadasDepartamentos[row.municipio];
+              if (!coords) return null;
+              return {
+                id: `depto-${row.municipio}`,
+                projectId: null as string | null,
+                label: row.municipio,
+                hombres: row.hombres,
+                mujeres: row.mujeres,
+                lat: coords.lat,
+                lng: coords.lng,
+              };
+            })
+            .filter((m): m is NonNullable<typeof m> => m !== null);
+
+          const mappedMarkers = [...departmentMarkers, ...projectMarkers];
 
         setProjects(mappedProjects.length > 0 ? mappedProjects : proyectosMapa);
         setMarkers(mappedMarkers.length > 0 ? mappedMarkers : marcadoresMapa);
@@ -155,7 +182,7 @@ export default function MapaVistaPage() {
     }
 
     const markersToShow = mostrarDetalle && proyectoSeleccionado
-      ? markers.filter((m) => String(m.id) === String(proyectoSeleccionado.id))
+      ? markers.filter((m) => m.id !== null && String(m.id) === String(proyectoSeleccionado.id))
       : markers;
 
     const groups: Record<string, { latSum: number; lngSum: number; hombres: number; mujeres: number; count: number }> = {};

@@ -7,6 +7,7 @@ import Student from '../../../../models/student.model.js';
 import MapMarker from '../../../../models/marker.model.js';
 import { HttpError } from '../../../../utils/httpError.js';
 import type { ProjectStatus } from '../../../../types/domain.js';
+import { pool } from '../../../../core/config/pool.js';
 
 const allowedStatuses: ProjectStatus[] = ['Activo', 'En planificación', 'En convocatoria', 'Cerrado'];
 
@@ -664,6 +665,277 @@ class ProjectsService {
       facultad: project.facultad ?? 'General',
       ubicacion: project.ubicacion.split(',')[0] ?? project.ubicacion,
       estudiantes: [],
+    }));
+  };
+
+
+  public getGenderSummary = async () => {
+    const sql = `
+      SELECT
+        COALESCE(
+          COUNT(*) FILTER (
+            WHERE s.genero = 'Masculino'
+          ), 0
+        ) AS hombres,
+
+        COALESCE(
+          COUNT(*) FILTER (
+            WHERE s.genero = 'Femenino'
+          ), 0
+        ) AS mujeres
+
+      FROM project_enrollments e
+
+      JOIN students s
+        ON s.id = e.student_id
+
+      WHERE e.activo = true;
+    `;
+
+    const result = await pool.query(sql);
+
+    const row = result.rows[0] || {
+      hombres: 0,
+      mujeres: 0,
+    };
+
+    return {
+      hombres: Number(row.hombres),
+      mujeres: Number(row.mujeres),
+    };
+  };
+
+    public getStudentsByCarreraAndYear = async () => {
+    const sql = `
+      SELECT
+        COALESCE(NULLIF(TRIM(s.carrera), ''), 'Sin carrera') AS carrera,
+        EXTRACT(YEAR FROM e.created_at)::int AS year,
+        COUNT(*) AS total
+      FROM project_enrollments e
+      JOIN students s ON s.id = e.student_id
+      WHERE e.activo = true
+      GROUP BY carrera, year
+      ORDER BY carrera ASC, year ASC;
+    `;
+
+    const result = await pool.query(sql);
+    const rows = result.rows || [];
+
+    const grouped: Record<string, Record<string, number | string>> = {};
+
+    for (const r of rows) {
+      const carrera = r.carrera || 'Sin carrera';
+      const yearKey = String(r.year);
+      const total = Number(r.total ?? 0);
+
+      if (!grouped[carrera]) {
+        grouped[carrera] = { carrera };
+      }
+
+      grouped[carrera][yearKey] = total;
+    }
+
+    return Object.values(grouped);
+  };
+
+    public getTrendByYear = async () => {
+    const sql = `
+      WITH enrollments AS (
+        SELECT EXTRACT(YEAR FROM e.created_at)::int AS year, COUNT(*) AS estudiantes
+        FROM project_enrollments e
+        WHERE e.activo = true
+        GROUP BY year
+      ),
+      projects_by_year AS (
+        SELECT EXTRACT(YEAR FROM fecha_inicio)::int AS year, COUNT(*) AS proyectos
+        FROM projects
+        WHERE fecha_inicio IS NOT NULL
+        GROUP BY year
+      ),
+      years AS (
+        SELECT year FROM enrollments
+        UNION
+        SELECT year FROM projects_by_year
+      )
+      SELECT
+        y.year::text AS anio,
+        COALESCE(en.estudiantes, 0) AS estudiantes,
+        COALESCE(p.proyectos, 0) AS proyectos
+      FROM years y
+      LEFT JOIN enrollments en ON en.year = y.year
+      LEFT JOIN projects_by_year p ON p.year = y.year
+      ORDER BY y.year ASC;
+    `;
+
+    const result = await pool.query(sql);
+    const rows = result.rows || [];
+
+    return rows.map((r: any) => ({
+      anio: String(r.anio),
+      estudiantes: Number(r.estudiantes ?? 0),
+      proyectos: Number(r.proyectos ?? 0),
+    }));
+  };
+
+    public getStudentsByMunicipio = async () => {
+    const sql = `
+      SELECT
+        COALESCE(
+          NULLIF(TRIM(SPLIT_PART(p.ubicacion, ',', 1)), ''),
+          'Sin municipio'
+        ) AS municipio,
+        COUNT(*) AS estudiantes
+      FROM project_enrollments e
+      JOIN projects p ON p.id = e.project_id
+      WHERE e.activo = true
+      GROUP BY municipio
+      ORDER BY estudiantes DESC;
+    `;
+
+    const result = await pool.query(sql);
+    const rows = result.rows || [];
+
+    return rows.map((r: any) => ({
+      municipio: String(r.municipio || 'Sin municipio'),
+      estudiantes: Number(r.estudiantes ?? 0),
+    }));
+  };
+
+    public getProjectsByMunicipio = async () => {
+    const sql = `
+      SELECT
+        COALESCE(
+          NULLIF(TRIM(SPLIT_PART(p.ubicacion, ',', 1)), ''),
+          'Sin municipio'
+        ) AS municipio,
+        COUNT(*) AS proyectos,
+        COALESCE(
+          COUNT(*) FILTER (WHERE p.estado = 'Activo'),
+          0
+        ) AS activos
+      FROM projects p
+      GROUP BY municipio
+      ORDER BY proyectos DESC;
+    `;
+
+    const result = await pool.query(sql);
+    const rows = result.rows || [];
+
+    return rows.map((r: any) => ({
+      municipio: String(r.municipio || 'Sin municipio'),
+      proyectos: Number(r.proyectos ?? 0),
+      activos: Number(r.activos ?? 0),
+    }));
+  };
+
+  public getProjectMetricsByInstitution = async () => {
+    const sql = `
+      WITH proj AS (
+        SELECT
+          institution_id,
+          COUNT(*) AS total,
+          COUNT(*) FILTER (WHERE estado = 'Activo') AS activos,
+          COUNT(*) FILTER (WHERE estado IN ('En planificación', 'En convocatoria')) AS progreso,
+          COUNT(*) FILTER (WHERE estado = 'Cerrado') AS cerrados
+        FROM projects
+        GROUP BY institution_id
+      ),
+      enr AS (
+        SELECT
+          p.institution_id,
+          COUNT(e.id) AS estudiantes
+        FROM projects p
+        JOIN project_enrollments e
+          ON e.project_id = p.id
+         AND e.activo = true
+        GROUP BY p.institution_id
+      )
+      SELECT
+        i.nombre,
+        COALESCE(i.tipo, '') AS tipo,
+        COALESCE(i.ubicacion, '') AS ubicacion,
+        COALESCE(proj.total, 0) AS total,
+        COALESCE(proj.activos, 0) AS activos,
+        COALESCE(proj.progreso, 0) AS progreso,
+        COALESCE(proj.cerrados, 0) AS cerrados,
+        COALESCE(enr.estudiantes, 0) AS estudiantes
+      FROM institutions i
+      LEFT JOIN proj ON proj.institution_id = i.id
+      LEFT JOIN enr ON enr.institution_id = i.id
+      ORDER BY i.nombre ASC;
+    `;
+
+    const result = await pool.query(sql);
+    const rows = result.rows || [];
+
+    return rows.map((r: any) => ({
+      nombre: String(r.nombre || ''),
+      tipo: String(r.tipo || ''),
+      ubicacion: String(r.ubicacion || ''),
+      total: Number(r.total ?? 0),
+      activos: Number(r.activos ?? 0),
+      progreso: Number(r.progreso ?? 0),
+      cerrados: Number(r.cerrados ?? 0),
+      estudiantes: Number(r.estudiantes ?? 0),
+    }));
+  };
+
+public getInstitutionDetailTable = async () => {
+    const sql = `
+      WITH proj AS (
+        SELECT
+          institution_id,
+          COUNT(*) AS total,
+          COUNT(*) FILTER (WHERE estado = 'Activo') AS activos,
+          COUNT(*) FILTER (WHERE estado IN ('En planificación', 'En convocatoria')) AS progreso,
+          COUNT(*) FILTER (WHERE estado = 'Cerrado') AS cerrados,
+          COUNT(DISTINCT facultad) AS facultades
+        FROM projects
+        GROUP BY institution_id
+      ),
+      enr AS (
+        SELECT
+          p.institution_id,
+          COUNT(e.id) AS estudiantes
+        FROM projects p
+        JOIN project_enrollments e
+          ON e.project_id = p.id
+         AND e.activo = true
+        GROUP BY p.institution_id
+      )
+      SELECT
+        i.nombre AS nombre,
+        i.nombre || ' (' || i.sigla || ')' AS "nombreFull",
+        COALESCE(i.tipo, 'Privada') AS tipo,
+        COALESCE(i.ubicacion, '') AS ubicacion,
+        COALESCE(proj.total, 0) AS total,
+        COALESCE(proj.activos, 0) AS activos,
+        COALESCE(proj.progreso, 0) AS progreso,
+        COALESCE(proj.cerrados, 0) AS cerrados,
+        COALESCE(enr.estudiantes, 0) AS estudiantes,
+        COALESCE(proj.facultades, 0) AS facultades
+      FROM institutions i
+      LEFT JOIN proj ON proj.institution_id = i.id
+      LEFT JOIN enr ON enr.institution_id = i.id
+      ORDER BY i.nombre ASC;
+    `;
+
+    const result = await pool.query(sql);
+    const rows = result.rows || [];
+
+    return rows.map((r: any) => ({
+      nombreFull: String(r.nombreFull || ''),
+      nombre: String(r.nombre || ''),
+      tipo: r.tipo?.toLowerCase().startsWith('púb') || r.tipo?.toLowerCase().startsWith('pub')
+        ? 'Pública'
+        : 'Privada',
+      ubicacion: String(r.ubicacion || ''),
+      total: Number(r.total ?? 0),
+      activos: Number(r.activos ?? 0),
+      progreso: Number(r.progreso ?? 0),
+      cerrados: Number(r.cerrados ?? 0),
+      estudiantes: Number(r.estudiantes ?? 0),
+      facultades: Number(r.facultades ?? 0),
     }));
   };
 

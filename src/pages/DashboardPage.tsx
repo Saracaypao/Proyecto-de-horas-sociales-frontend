@@ -14,10 +14,21 @@ import {
   getMapMarkers,
   getProjects,
   getDashboardSummary,
+  getStudentsByCarreraAndYear,
+  getStudentsByMunicipio,
+  getProjectsByMunicipio,
+  getInstitutionDetailTable,
+  getTrendByYear,
+  getGenderSummaryAPI,
   type DashboardSummaryResponse,
   type InstitutionListResponse,
   type MapMarkerResponse,
   type ProjectListResponse,
+  type CarreraAnioRow,
+  type EstudiantesMunicipioRow,
+  type ProyectosMunicipioRow,
+  type TablaInstitucionRow,
+  type TrendYearRow,
 } from '../services/api';
 
 // ─── Paleta de colores ────────────────────────────────────────────────────────
@@ -37,7 +48,7 @@ const PALETTE = [C.blue, C.green, C.pink, C.purple, C.yellow, C.teal, C.orange, 
 // ─── Datos estáticos enriquecidos ─────────────────────────────────────────────
 
 // Req 1 — Alumnos por carrera y año haciendo horas sociales
-const alumnosPorCarreraAnio = [
+const alumnosPorCarreraAnioFallback: CarreraAnioRow[] = [
   { carrera: 'Medicina',         '2022': 18, '2023': 24, '2024': 31 },
   { carrera: 'Ingeniería Civil', '2022': 14, '2023': 20, '2024': 27 },
   { carrera: 'Educación',        '2022': 22, '2023': 28, '2024': 35 },
@@ -49,7 +60,7 @@ const alumnosPorCarreraAnio = [
 ];
 
 // Req 3 — Estudiantes por municipio
-const estudiantesPorMunicipio = [
+const estudiantesPorMunicipioFallback = [
   { municipio: 'San Salvador',  estudiantes: 142 },
   { municipio: 'Santa Ana',     estudiantes: 87  },
   { municipio: 'San Miguel',    estudiantes: 65  },
@@ -63,7 +74,7 @@ const estudiantesPorMunicipio = [
 ];
 
 // Req 4 — Proyectos por municipio
-const proyectosPorMunicipio = [
+const proyectosPorMunicipioFallback = [
   { municipio: 'San Salvador',  proyectos: 18, activos: 12 },
   { municipio: 'Santa Ana',     proyectos: 11, activos:  7 },
   { municipio: 'San Miguel',    proyectos:  9, activos:  6 },
@@ -80,73 +91,84 @@ function useMetrics(
   apiInstitutions: InstitutionListResponse[],
   apiMarkers: MapMarkerResponse[],
   apiSummary: DashboardSummaryResponse | null,
+  apiInstitucionTabla: TablaInstitucionRow[],
+  apiTendencia: TrendYearRow[],
+  apiGenero: { hombres: number; mujeres: number } | null,
+  apiProyectosMunicipio: ProyectosMunicipioRow[],
 ) {
   return useMemo(() => {
     const allProjects = instituciones.flatMap((i) => i.proyectos);
 
-    // Req 6 — Total de estudiantes en servicio social externo
-    // Prioriza el dato real del backend (summary), luego las instituciones de la API, luego datos locales
     const totalEstudiantesExterno =
       apiSummary?.totalStudentsExternal ??
-      (apiInstitutions.reduce((sum, institution) => {
-        return sum + Number(institution.totalEstudiantesAsignados ?? 0);
-      }, 0) || instituciones.reduce((sum, i) => {
-        return sum + parseInt(i.estadisticas.find(([, l]) => l.includes('Estudiantes'))?.[0] ?? '0', 10);
-      }, 0));
+      (apiInstitutions.reduce((sum, institution) => sum + Number(institution.totalEstudiantesAsignados ?? 0), 0)
+        || instituciones.reduce((sum, i) =>
+          sum + parseInt(i.estadisticas.find(([, l]) => l.includes('Estudiantes'))?.[0] ?? '0', 10), 0));
 
     const totalProyectos     = apiSummary?.totalProjects ?? (apiProjects.length || allProjects.length);
     const totalInstituciones = apiSummary?.totalInstitutions ?? (apiInstitutions.length || instituciones.length);
-    const totalMunicipios    = proyectosPorMunicipio.length;
 
-    // Req 2 — Hombres y mujeres haciendo horas sociales
-    const summaryHombres = apiSummary?.genderSummary?.hombres;
-    const summaryMujeres = apiSummary?.genderSummary?.mujeres;
+    // Req 2 — Género: usa el endpoint dedicado primero
     const totalHombres =
-      summaryHombres != null
-        ? summaryHombres
-        : apiMarkers.reduce((s, m) => s + Number(m.hombres ?? 0), 0) || marcadoresMapa.reduce((s, m) => s + m.hombres, 0);
+      apiGenero?.hombres
+      ?? apiSummary?.genderSummary?.hombres
+      ?? (apiMarkers.reduce((s, m) => s + Number(m.hombres ?? 0), 0)
+          || marcadoresMapa.reduce((s, m) => s + m.hombres, 0));
+
     const totalMujeres =
-      summaryMujeres != null
-        ? summaryMujeres
-        : apiMarkers.reduce((s, m) => s + Number(m.mujeres ?? 0), 0) || marcadoresMapa.reduce((s, m) => s + m.mujeres, 0);
+      apiGenero?.mujeres
+      ?? apiSummary?.genderSummary?.mujeres
+      ?? (apiMarkers.reduce((s, m) => s + Number(m.mujeres ?? 0), 0)
+          || marcadoresMapa.reduce((s, m) => s + m.mujeres, 0));
+
     const generoData = [
       { name: 'Hombres', value: totalHombres },
       { name: 'Mujeres', value: totalMujeres },
     ];
 
-    // Req 5 — Métricas de proyectos por institución
-    const metricasPorInstitucion = instituciones.map((i) => ({
-      nombre:      i.nombre.split('(')[0].trim(),
-      nombreFull:  i.nombre,
-      tipo:        i.tipo?.includes('Public') ? 'Pública' : 'Privada',
-      ubicacion:   i.ubicacion,
-      total:       i.proyectos.length,
-      activos:     i.proyectos.filter((p) => p.estado === 'Activo').length,
-      progreso:    i.proyectos.filter((p) => p.estado !== 'Activo' && p.estado !== 'Cerrado').length,
-      cerrados:    i.proyectos.filter((p) => p.estado === 'Cerrado').length,
-      estudiantes: parseInt(i.estadisticas.find(([, l]) => l.includes('Estudiantes'))?.[0] ?? '0', 10),
-      facultades:  parseInt(i.estadisticas.find(([, l]) => l.includes('Facultades'))?.[0] ?? '0', 10),
-    })).sort((a, b) => b.total - a.total);
+    // Req 5/6/7 — viene directo del backend, con fallback a datos locales
+    const metricasPorInstitucion = apiInstitucionTabla.length > 0
+      ? apiInstitucionTabla
+      : instituciones.map((i) => ({
+          nombre:      i.nombre.split('(')[0].trim(),
+          nombreFull:  i.nombre,
+          tipo:        i.tipo?.includes('Public') ? 'Pública' : 'Privada',
+          ubicacion:   i.ubicacion,
+          total:       i.proyectos.length,
+          activos:     i.proyectos.filter((p) => p.estado === 'Activo').length,
+          progreso:    i.proyectos.filter((p) => p.estado !== 'Activo' && p.estado !== 'Cerrado').length,
+          cerrados:    i.proyectos.filter((p) => p.estado === 'Cerrado').length,
+          estudiantes: parseInt(i.estadisticas.find(([, l]) => l.includes('Estudiantes'))?.[0] ?? '0', 10),
+          facultades:  parseInt(i.estadisticas.find(([, l]) => l.includes('Facultades'))?.[0] ?? '0', 10),
+        })).sort((a, b) => b.total - a.total);
 
-    // Tendencia histórica — si el backend devuelve trendByYear lo usa, si no usa datos fijos
-    const tendenciaAnual = apiSummary?.trendByYear ?? [
+    const totalMunicipios = apiProyectosMunicipio.length > 0
+      ? apiProyectosMunicipio.length
+      : proyectosPorMunicipioFallback.length;
+
+    const tendenciaAnual = apiTendencia.length > 0 ? apiTendencia : (apiSummary?.trendByYear ?? [
       { anio: '2020', estudiantes: 210, proyectos: 28 },
       { anio: '2021', estudiantes: 285, proyectos: 37 },
       { anio: '2022', estudiantes: 364, proyectos: 49 },
       { anio: '2023', estudiantes: 498, proyectos: 64 },
       { anio: '2024', estudiantes: totalEstudiantesExterno, proyectos: totalProyectos },
-    ];
+    ]);
 
     return {
       totalEstudiantesExterno, totalProyectos, totalInstituciones,
       totalMunicipios, totalHombres, totalMujeres,
       generoData, metricasPorInstitucion, tendenciaAnual,
     };
-  }, [apiProjects, apiInstitutions, apiMarkers, apiSummary]);
+  }, [apiProjects, apiInstitutions, apiMarkers, apiSummary, apiInstitucionTabla, apiTendencia, apiGenero, apiProyectosMunicipio]);
 }
 
 // ─── Exportar CSV ─────────────────────────────────────────────────────────────
-function exportToExcel(metrics: ReturnType<typeof useMetrics>) {
+function exportToExcel(
+  metrics: ReturnType<typeof useMetrics>,
+  alumnosPorCarreraAnio: CarreraAnioRow[],
+  estudiantesPorMunicipio: EstudiantesMunicipioRow[],
+  proyectosPorMunicipio: ProyectosMunicipioRow[],
+) {
   const sheets = [
     {
       name: 'Resumen General',
@@ -253,10 +275,32 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 // Req 1 — Gráfico con selector de año
-function CarrerasChart() {
-  const [anio, setAnio] = useState<'2022' | '2023' | '2024'>('2024');
-  const data = alumnosPorCarreraAnio
-    .map((d) => ({ carrera: d.carrera, alumnos: d[anio] }))
+function CarrerasChart({ data: apiData }: { data: CarreraAnioRow[] }) {
+  const source = apiData.length > 0 ? apiData : alumnosPorCarreraAnioFallback;
+
+  // Calcula dinámicamente qué años existen en los datos (todas las claves excepto "carrera")
+  const availableYears = useMemo(() => {
+    const yearsSet = new Set<string>();
+    source.forEach((row) => {
+      Object.keys(row).forEach((key) => {
+        if (key !== 'carrera') yearsSet.add(key);
+      });
+    });
+    return Array.from(yearsSet).sort();
+  }, [source]);
+
+  const [anio, setAnio] = useState<string>(availableYears[availableYears.length - 1] ?? '');
+
+  // Si los datos cambian (ej: llegan del backend) y el año seleccionado ya no existe,
+  // selecciona el más reciente disponible
+  useEffect(() => {
+    if (availableYears.length > 0 && !availableYears.includes(anio)) {
+      setAnio(availableYears[availableYears.length - 1]);
+    }
+  }, [availableYears, anio]);
+
+  const data = source
+    .map((d) => ({ carrera: d.carrera, alumnos: Number(d[anio] ?? 0) }))
     .sort((a, b) => b.alumnos - a.alumnos);
 
   return (
@@ -265,7 +309,7 @@ function CarrerasChart() {
       subtitle="Número de estudiantes realizando horas sociales, filtrando por año académico"
     >
       <div className="dash-year-selector">
-        {(['2022', '2023', '2024'] as const).map((y) => (
+        {availableYears.map((y) => (
           <button key={y} type="button" className={`dash-year-btn ${anio === y ? 'active' : ''}`} onClick={() => setAnio(y)}>
             {y}
           </button>
@@ -292,13 +336,24 @@ export default function DashboardPage() {
   const [apiInstitutions, setApiInstitutions] = useState<InstitutionListResponse[]>([]);
   const [apiMarkers, setApiMarkers] = useState<MapMarkerResponse[]>([]);
   const [apiSummary, setApiSummary] = useState<DashboardSummaryResponse | null>(null);
+  const [apiCarreraAnio, setApiCarreraAnio] = useState<CarreraAnioRow[]>([]);
+  const [apiEstudiantesMunicipio, setApiEstudiantesMunicipio] = useState<EstudiantesMunicipioRow[]>([]);
+  const [apiProyectosMunicipio, setApiProyectosMunicipio] = useState<ProyectosMunicipioRow[]>([]);
+  const [apiInstitucionTabla, setApiInstitucionTabla] = useState<TablaInstitucionRow[]>([]);
+  const [apiTendencia, setApiTendencia] = useState<TrendYearRow[]>([]);
+  const [apiGenero, setApiGenero] = useState<{ hombres: number; mujeres: number } | null>(null);
 
-  const metrics   = useMetrics(apiProjects, apiInstitutions, apiMarkers, apiSummary);
+  const metrics   = useMetrics(apiProjects, apiInstitutions, apiMarkers, apiSummary, apiInstitucionTabla, apiTendencia, apiGenero, apiProyectosMunicipio);
   const [exportOpen, setExportOpen] = useState(false);
 
   const total = metrics.totalHombres + metrics.totalMujeres;
   const pctH  = total > 0 ? Math.round((metrics.totalHombres / total) * 100) : 50;
   const pctM  = 100 - pctH;
+  const currentYear = new Date().getFullYear();
+
+  // Datos para los gráficos de municipios (API si existen, si no, datos de respaldo)
+  const estudiantesMunicipioData = apiEstudiantesMunicipio.length > 0 ? apiEstudiantesMunicipio : estudiantesPorMunicipioFallback;
+  const proyectosMunicipioData   = apiProyectosMunicipio.length > 0 ? apiProyectosMunicipio : proyectosPorMunicipioFallback;
 
   useEffect(() => {
     let active = true;
@@ -329,6 +384,29 @@ export default function DashboardPage() {
       } catch {
         // El summary es opcional: si falla, useMetrics usa los datos ya cargados
       }
+
+      // Carga como el summary por separado para no bloquear si falla
+      try {
+        const [carreraAnio, estudiantesMunicipio, proyectosMunicipio, tablaInstituciones, tendencia, genero] =
+          await Promise.all([
+            getStudentsByCarreraAndYear(),
+            getStudentsByMunicipio(),
+            getProjectsByMunicipio(),
+            getInstitutionDetailTable(),
+            getTrendByYear(),
+            getGenderSummaryAPI(),
+          ]);
+
+        if (!active) return;
+        setApiCarreraAnio(carreraAnio);
+        setApiEstudiantesMunicipio(estudiantesMunicipio);
+        setApiProyectosMunicipio(proyectosMunicipio);
+        setApiInstitucionTabla(tablaInstituciones);
+        setApiTendencia(tendencia);
+        setApiGenero(genero);
+      } catch {
+        // si falla, los componentes usan los datos estáticos como fallback
+      }
     }
 
     loadDashboardData();
@@ -356,7 +434,15 @@ export default function DashboardPage() {
                 <button type="button" onClick={() => { window.print(); setExportOpen(false); }}>
                   <Download size={15} /> Exportar como PDF
                 </button>
-                <button type="button" onClick={() => { exportToExcel(metrics); setExportOpen(false); }}>
+                <button type="button" onClick={() => {
+                  exportToExcel(
+                    metrics,
+                    apiCarreraAnio.length > 0 ? apiCarreraAnio : alumnosPorCarreraAnioFallback,
+                    estudiantesMunicipioData,
+                    proyectosMunicipioData,
+                  );
+                  setExportOpen(false);
+                }}>
                   <FileSpreadsheet size={15} /> Exportar como Excel (CSV)
                 </button>
               </div>
@@ -367,7 +453,7 @@ export default function DashboardPage() {
 
       {/* KPIs — incluye el total de externos (Req 6) y el desglose de género (Req 2) */}
       <div className="dash-kpi-grid">
-        <KpiCard icon={<UserCheck size={22} />}     label="Estudiantes en Servicio Social Externo" value={metrics.totalEstudiantesExterno} sub="Total activos 2024"        color={C.blue}   />
+        <KpiCard icon={<UserCheck size={22} />}     label="Estudiantes en Servicio Social Externo" value={metrics.totalEstudiantesExterno} sub={`Total activos ${currentYear}`} color={C.blue}   />
         <KpiCard icon={<BookOpen size={22} />}      label="Proyectos Totales"                       value={metrics.totalProyectos}          sub="Todas las instituciones"  color={C.green}  />
         <KpiCard icon={<Building2 size={22} />}     label="Instituciones Aliadas"                   value={metrics.totalInstituciones}      sub="Públicas y privadas"      color={C.purple} />
         <KpiCard icon={<MapPin size={22} />}        label="Municipios con Proyectos"                value={metrics.totalMunicipios}         sub="Cobertura nacional"       color={C.teal}   />
@@ -376,7 +462,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Req 1 — Alumnos por carrera y año */}
-      <CarrerasChart />
+      <CarrerasChart data={apiCarreraAnio} />
 
       {/* Req 2 — Género + Tendencia anual */}
       <div className="dash-grid-2">
@@ -416,13 +502,13 @@ export default function DashboardPage() {
       {/* Req 3 — Estudiantes por municipio */}
       <ChartCard title="Número de Estudiantes por Municipio" subtitle="Distribución de estudiantes en servicio social externo según municipio de ejecución del proyecto">
         <ResponsiveContainer width="100%" height={280}>
-          <BarChart data={estudiantesPorMunicipio} margin={{ top: 4, right: 24, left: 0, bottom: 8 }}>
+          <BarChart data={estudiantesMunicipioData} margin={{ top: 4, right: 24, left: 0, bottom: 8 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" />
             <XAxis dataKey="municipio" tick={{ fontSize: 11 }} angle={-20} textAnchor="end" height={48} />
             <YAxis tick={{ fontSize: 12 }} />
             <Tooltip content={<CustomTooltip />} />
             <Bar dataKey="estudiantes" name="Estudiantes" radius={[6, 6, 0, 0]}>
-              {estudiantesPorMunicipio.map((_, i) => <Cell key={i} fill={PALETTE[i % PALETTE.length]} />)}
+              {estudiantesMunicipioData.map((_, i) => <Cell key={i} fill={PALETTE[i % PALETTE.length]} />)}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
@@ -431,7 +517,7 @@ export default function DashboardPage() {
       {/* Req 4 — Proyectos por municipio */}
       <ChartCard title="Número de Proyectos por Municipio" subtitle="Total de proyectos registrados versus proyectos actualmente activos por municipio">
         <ResponsiveContainer width="100%" height={280}>
-          <BarChart data={proyectosPorMunicipio} margin={{ top: 4, right: 24, left: 0, bottom: 8 }}>
+          <BarChart data={proyectosMunicipioData} margin={{ top: 4, right: 24, left: 0, bottom: 8 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" />
             <XAxis dataKey="municipio" tick={{ fontSize: 11 }} angle={-20} textAnchor="end" height={48} />
             <YAxis tick={{ fontSize: 12 }} />

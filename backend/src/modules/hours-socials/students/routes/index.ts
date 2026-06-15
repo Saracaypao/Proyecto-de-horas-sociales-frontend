@@ -102,4 +102,36 @@ const controller = new StudentsController();
  */
 router.get('/', controller.listStudents);
 
+/**
+ * @swagger
+ * /api/students/genero-municipio:
+ *   get:
+ *     summary: Distribución de hombres y mujeres en servicio social por municipio
+ *     tags: [Students]
+ *     responses:
+ *       200:
+ *         description: Lista de municipios con conteo de hombres y mujeres
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   municipio:
+ *                     type: string
+ *                   hombres:
+ *                     type: integer
+ *                   mujeres:
+ *                     type: integer
+ *             example:
+ *               - municipio: "San Salvador"
+ *                 hombres: 12
+ *                 mujeres: 15
+ *               - municipio: "Santa Ana"
+ *                 hombres: 5
+ *                 mujeres: 8
+ */
+router.get('/genero-municipio', controller.getGenderByMunicipio);
+
 export default router;

@@ -23,6 +23,15 @@ class StudentsController {
       next(error);
     }
   };
+
+  public getGenderByMunicipio = async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      res.json(await studentsService.getGenderByMunicipio());
+    } catch (error) {
+      next(error);
+    }
+  };
+  
 }
 
 const studentsController = new StudentsController();

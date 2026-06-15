@@ -341,3 +341,10 @@ export function getProjectMetricsByInstitution() {
 export function getInstitutionDetailTable() {
   return request<TablaInstitucionRow[]>('/dashboard/tabla-institucion');
 }
+
+/** Género por municipio (para marcadores del mapa) */
+export type GeneroMunicipioRow = { municipio: string; hombres: number; mujeres: number };
+
+export function getGenderByMunicipio() {
+  return request<GeneroMunicipioRow[]>('/students/genero-municipio');
+}

@@ -64,12 +64,12 @@ export const proyectosMapa: ProyectoMapa[] = [
 ];
 
 export const marcadoresMapa: MarcadorMapa[] = [
-  { label: 'Santa Ana', hombres: 14, mujeres: 18, lat: 13.9940, lng: -89.5597, id: 'cerro-verde' },
-  { label: 'San Salvador', hombres: 45, mujeres: 52, lat: 13.6929, lng: -89.2182, id: 'alfabetizacion-digital' },
-  { label: 'Chalatenango', hombres: 8, mujeres: 12, lat: 14.0890, lng: -88.9450, id: 'alfabetizacion-digital' },
-  { label: 'Santa Tecla', hombres: 15, mujeres: 19, lat: 13.6761, lng: -89.2965, id: 'emprendimientos-locales' },
-  { label: 'San Miguel', hombres: 22, mujeres: 20, lat: 13.4833, lng: -88.1833, id: 'paneles-solares' },
-  { label: 'Usulután', hombres: 6, mujeres: 9, lat: 13.3500, lng: -88.4500, id: 'paneles-solares' },
+  { label: 'Santa Ana', hombres: 14, mujeres: 18, lat: 13.9940, lng: -89.5597, id: 'cerro-verde', projectId: 'cerro-verde' },
+  { label: 'San Salvador', hombres: 45, mujeres: 52, lat: 13.6929, lng: -89.2182, id: 'alfabetizacion-digital', projectId: 'alfabetizacion-digital' },
+  { label: 'Chalatenango', hombres: 8, mujeres: 12, lat: 14.0890, lng: -88.9450, id: 'alfabetizacion-digital-2', projectId: 'alfabetizacion-digital' },
+  { label: 'Santa Tecla', hombres: 15, mujeres: 19, lat: 13.6761, lng: -89.2965, id: 'emprendimientos-locales', projectId: 'emprendimientos-locales' },
+  { label: 'San Miguel', hombres: 22, mujeres: 20, lat: 13.4833, lng: -88.1833, id: 'paneles-solares', projectId: 'paneles-solares' },
+  { label: 'Usulután', hombres: 6, mujeres: 9, lat: 13.3500, lng: -88.4500, id: 'paneles-solares-2', projectId: 'paneles-solares' },
 ];
 
 export const proyectosEstudiantes: ProyectoEstudiante[] = [

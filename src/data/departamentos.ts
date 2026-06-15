@@ -1,0 +1,21 @@
+// Coordenadas aproximadas de las cabeceras departamentales / municipios de El Salvador
+export const coordenadasDepartamentos: Record<string, { lat: number; lng: number }> = {
+  'Ahuachapán':   { lat: 13.9214, lng: -89.8450 },
+  'Santa Ana':    { lat: 13.9942, lng: -89.5597 },
+  'Sonsonate':    { lat: 13.7186, lng: -89.7244 },
+  'Chalatenango': { lat: 14.0335, lng: -88.9333 },
+  'La Libertad':  { lat: 13.6769, lng: -89.2965 },
+  'San Salvador': { lat: 13.6929, lng: -89.2182 },
+  'Cuscatlán':    { lat: 13.7167, lng: -88.9333 },
+  'La Paz':       { lat: 13.5000, lng: -88.9333 },
+  'Cabañas':      { lat: 13.8667, lng: -88.6333 },
+  'San Vicente':  { lat: 13.6333, lng: -88.7833 },
+  'Usulután':     { lat: 13.3500, lng: -88.4500 },
+  'San Miguel':   { lat: 13.4833, lng: -88.1833 },
+  'Morazán':      { lat: 13.7167, lng: -88.1167 },
+  'La Unión':     { lat: 13.3367, lng: -87.8444 },
+  'Santa Tecla':  { lat: 13.6761, lng: -89.2965 },
+  'Soyapango':    { lat: 13.7167, lng: -89.1500 },
+  'Cojutepeque':  { lat: 13.7167, lng: -88.9333 },
+  'Zacatecoluca': { lat: 13.5000, lng: -88.8667 },
+};

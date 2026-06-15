@@ -47,14 +47,13 @@ export type ProyectoMapa = Proyecto & {
 };
 
 export type MarcadorMapa = {
+  id: string;
+  projectId: string | null;
   label: string;
   hombres: number;
   mujeres: number;
-  // Replaced screen-position percentages with geographic coordinates
-  // (latitude / longitude) so markers can be anchored to the map.
   lat: number;
   lng: number;
-  id: string;
 };
 
 export type ProyectoEstudiante = {
