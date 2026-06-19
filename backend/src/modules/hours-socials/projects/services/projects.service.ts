@@ -1,4 +1,4 @@
-import { col, fn, Transaction, where } from 'sequelize';
+import { col, fn, QueryTypes, Transaction, where } from 'sequelize';
 import sequelize from '../../../../core/config/database.js';
 import Institution from '../../../../models/institution.model.js';
 import Project from '../../../../models/project.model.js';
@@ -230,27 +230,10 @@ function toProjectDetailDTO(
 
 function toProjectDTO(project: any) {
   const plain = typeof project.get === 'function' ? project.get({ plain: true }) : project;
-  
-  // Filtrar solo las inscripciones verdaderamente activas que traiga el modelo
-  const enrollments = Array.isArray(plain.enrollments) 
-    ? plain.enrollments.filter((e: any) => e?.activo !== false) 
-    : [];
-    
-  const personas = enrollments.length ?? plain.personas ?? 0;
+  const activeEnrollments = countActiveEnrollmentsFromPlain(plain);
+  const personas = activeEnrollments ?? plain.personas ?? 0;
   const cupos = plain.cupos ?? null;
   const capacity = formatCapacity(personas, cupos);
-
-  // Calcular el género real basado en los estudiantes incluidos
-  const genderTotals = enrollments.reduce(
-    (acc: { hombres: number; mujeres: number }, e: any) => {
-      const genero = e.student?.genero;
-      if (genero === 'Masculino') acc.hombres += 1;
-      else if (genero === 'Femenino') acc.mujeres += 1;
-      return acc;
-    },
-    { hombres: 0, mujeres: 0 }
-  );
-
   return {
     id: plain.id,
     institutionId: plain.institution_id,
@@ -275,19 +258,16 @@ function toProjectDTO(project: any) {
     equipo: plain.team_members ?? [],
     personas,
     institution: plain.institution?.nombre ?? plain.institutionName ?? '',
-    // Enviamos los géneros reales calculados para las cards del listado
-    hombres: genderTotals.hombres,
-    mujeres: genderTotals.mujeres,
   };
 }
 
 function toProjectListDTO(project: any) {
   const payload = toProjectDTO(project);
   const { image, ...listPayload } = payload;
-  return toProjectDTO(project);
+  return listPayload;
 }
 
-/*function toProjectMapDTO(project: any) {
+function toProjectMapDTO(project: any) {
   const plain = typeof project.get === 'function' ? project.get({ plain: true }) : project;
   const markers = Array.isArray(plain.markers) ? plain.markers : [];
   const totals = sumMarkerValues(markers);
@@ -302,13 +282,15 @@ function toProjectListDTO(project: any) {
     hombres: totals.hombres,
     mujeres: totals.mujeres,
   };
-}*/
+}
 
 class ProjectsService {
   public listProjects = async (filters: { search?: string; status?: string; institutionId?: string; location?: string; faculty?: string } = {}) => {
     const where: any = {};
 
     if (filters.institutionId) where.institution_id = filters.institutionId;
+
+    const search = filters.search?.trim();
 
     const projects = await Project.findAll({
       where,
@@ -322,16 +304,8 @@ class ProjectsService {
         {
           model: ProjectEnrollment,
           as: 'enrollments',
-          where: { activo: true }, // <--- Crucial: Solo inscripciones activas
           required: false,
-          include: [
-            {
-              model: Student,
-              as: 'student',
-              required: true,
-              attributes: ['id', 'genero', 'nombre'], // Traemos el género y nombre real
-            },
-          ],
+          attributes: ['id', 'activo'],
         },
       ],
       order: [['created_at', 'DESC']],
@@ -339,7 +313,6 @@ class ProjectsService {
 
     const mapped = projects.map(toProjectListDTO);
 
-    const search = filters.search?.trim();
     const loweredSearch = search?.toLowerCase();
     const loweredLocation = filters.location?.trim().toLowerCase();
     const normalizedStatus = filters.status?.trim().toLowerCase();
@@ -359,7 +332,7 @@ class ProjectsService {
   };
 
   public listProjectsForMap = async () => {
-    // Traemos los proyectos incluyendo directamente sus estudiantes asignados activos
+    // Obtener todos los proyectos con su institución (sin filtrar por markers)
     const projects = await Project.findAll({
       include: [
         {
@@ -371,41 +344,36 @@ class ProjectsService {
         {
           model: ProjectEnrollment,
           as: 'enrollments',
-          where: { activo: true }, // Solo inscripciones vigentes
-          required: false,         // Permite proyectos vacíos en el mapa sin tumbar la consulta
-          include: [
-            {
-              model: Student,
-              as: 'student',
-              required: true,
-              attributes: ['genero'], // Solo nos interesa el género para contar
-            },
-          ],
+          required: false,
+          attributes: ['id', 'activo'],
         },
       ],
       order: [['created_at', 'DESC']],
     });
 
-    // Mapeamos y contamos en memoria de forma segura y exacta
+    // Contar género real desde project_enrollments + students en una sola consulta
+    const genderSql = `
+      SELECT
+        e.project_id,
+        COALESCE(COUNT(*) FILTER (WHERE s.genero = 'Masculino'), 0) AS hombres,
+        COALESCE(COUNT(*) FILTER (WHERE s.genero = 'Femenino'),  0) AS mujeres
+      FROM project_enrollments e
+      JOIN students s ON s.id = e.student_id
+      WHERE e.activo = true
+      GROUP BY e.project_id;
+    `;
+    const genderResult = await pool.query(genderSql);
+    const genderByProject = new Map<number, { hombres: number; mujeres: number }>();
+    for (const row of genderResult.rows) {
+      genderByProject.set(Number(row.project_id), {
+        hombres: Number(row.hombres),
+        mujeres: Number(row.mujeres),
+      });
+    }
+
     return projects.map((project) => {
       const plain = typeof project.get === 'function' ? project.get({ plain: true }) : project;
-      
-      const enrollments = Array.isArray(plain.enrollments) ? plain.enrollments : [];
-      
-      // Contadores iniciales
-      let hombres = 0;
-      let mujeres = 0;
-
-      // Iteramos sobre las inscripciones reales y activas del proyecto
-      for (const enrollment of enrollments) {
-        const genero = enrollment.student?.genero;
-        if (genero === 'Masculino') {
-          hombres++;
-        } else if (genero === 'Femenino') {
-          mujeres++;
-        }
-      }
-
+      const gender = genderByProject.get(Number(plain.id)) ?? { hombres: 0, mujeres: 0 };
       return {
         id: plain.id,
         institution: plain.institution?.nombre ?? '',
@@ -413,8 +381,8 @@ class ProjectsService {
         nombre: plain.titulo,
         ubicacion: plain.ubicacion,
         descripcion: plain.descripcion,
-        hombres,
-        mujeres,
+        hombres: gender.hombres,
+        mujeres: gender.mujeres,
       };
     });
   };
@@ -446,7 +414,7 @@ class ProjectsService {
     const project = await Project.findByPk(id, {
       include: [
         { model: Institution, as: 'institution', attributes: ['id', 'nombre', 'sigla'], required: true },
-        //{ model: MapMarker, as: 'markers', required: false, attributes: ['id', 'hombres', 'mujeres'] },
+        { model: MapMarker, as: 'markers', required: false, attributes: ['id', 'hombres', 'mujeres'] },
       ],
     });
 
@@ -575,26 +543,43 @@ class ProjectsService {
       );
 
       for (const studentDraft of students) {
-        const [student] = await Student.upsert(
+        // Student.upsert() resuelve por PK (UUID), no por carnet → unique constraint error.
+        // Usamos SQL raw con ON CONFLICT (carnet) para manejar estudiantes existentes.
+        const studentRows = await sequelize.query<{ id: string }>(
+          `INSERT INTO students (id, nombre, carnet, carrera, genero, avatar, email, created_at)
+           VALUES (gen_random_uuid(), :nombre, :carnet, :carrera, :genero, :avatar, :email, NOW())
+           ON CONFLICT (carnet) DO UPDATE SET
+             nombre  = EXCLUDED.nombre,
+             carrera = EXCLUDED.carrera,
+             genero  = EXCLUDED.genero,
+             avatar  = COALESCE(EXCLUDED.avatar, students.avatar),
+             email   = COALESCE(EXCLUDED.email,  students.email)
+           RETURNING id`,
           {
-            nombre: studentDraft.nombre,
-            carnet: studentDraft.carnet,
-            carrera: studentDraft.carrera || careers[0] || '',
-            genero:  (studentDraft.genero as 'Masculino' | 'Femenino') || null,
-            avatar: studentDraft.avatar,
-            email: studentDraft.email,
-          },
-          { transaction, returning: true }
+            replacements: {
+              nombre: studentDraft.nombre,
+              carnet: studentDraft.carnet,
+              carrera: studentDraft.carrera || careers[0] || '',
+              genero: (studentDraft.genero === 'Masculino' || studentDraft.genero === 'Femenino')
+                ? studentDraft.genero : null,
+              avatar: studentDraft.avatar || null,
+              email:  studentDraft.email  || null,
+            },
+            type: QueryTypes.SELECT,
+            transaction,
+          }
         );
+        const studentId = (studentRows[0] as any).id;
 
-        await ProjectEnrollment.upsert(
+        await sequelize.query(
+          `INSERT INTO project_enrollments (id, project_id, student_id, cargo, activo, created_at)
+           VALUES (gen_random_uuid(), :project_id, :student_id, 'Estudiante', true, NOW())
+           ON CONFLICT (project_id, student_id) DO UPDATE SET activo = true`,
           {
-            project_id: project.id,
-            student_id: student.id,
-            cargo: 'Estudiante',
-            activo: true,
-          },
-          { transaction, returning: true }
+            replacements: { project_id: project.id, student_id: studentId },
+            type: QueryTypes.INSERT,
+            transaction,
+          }
         );
       }
 
@@ -617,27 +602,51 @@ class ProjectsService {
 
     const transaction = await sequelize.transaction();
     try {
-      const [student] = await Student.upsert(
+      // Student.upsert() resuelve por PK (UUID), no por carnet → unique constraint error.
+      const studentRows = await sequelize.query<{ id: string }>(
+        `INSERT INTO students (id, nombre, carnet, carrera, genero, avatar, email, created_at)
+         VALUES (gen_random_uuid(), :nombre, :carnet, :carrera, :genero, :avatar, :email, NOW())
+         ON CONFLICT (carnet) DO UPDATE SET
+           nombre  = EXCLUDED.nombre,
+           carrera = EXCLUDED.carrera,
+           genero  = EXCLUDED.genero,
+           avatar  = COALESCE(EXCLUDED.avatar, students.avatar),
+           email   = COALESCE(EXCLUDED.email,  students.email)
+         RETURNING id`,
         {
-          nombre: String(body.nombre),
-          carnet: String(body.carnet),
-          carrera: String(body.carrera),
-          genero:  (body.genero === 'Masculino' || body.genero === 'Femenino') ? body.genero : null,
-          avatar: typeof body.avatar === 'string' ? body.avatar : null,
-          email: typeof body.email === 'string' ? body.email : null,
-        },
-        { transaction, returning: true }
+          replacements: {
+            nombre: String(body.nombre),
+            carnet: String(body.carnet),
+            carrera: String(body.carrera),
+            genero: (body.genero === 'Masculino' || body.genero === 'Femenino') ? body.genero : null,
+            avatar: typeof body.avatar === 'string' ? body.avatar : null,
+            email:  typeof body.email  === 'string' ? body.email  : null,
+          },
+          type: QueryTypes.SELECT,
+          transaction,
+        }
       );
+      const studentId = (studentRows[0] as any).id;
 
-      const [enrollment] = await ProjectEnrollment.upsert(
+      const enrollmentRows = await sequelize.query<{ id: string }>(
+        `INSERT INTO project_enrollments (id, project_id, student_id, cargo, activo, created_at)
+         VALUES (gen_random_uuid(), :project_id, :student_id, :cargo, :activo, NOW())
+         ON CONFLICT (project_id, student_id) DO UPDATE SET
+           cargo  = EXCLUDED.cargo,
+           activo = EXCLUDED.activo
+         RETURNING id`,
         {
-          project_id: numericProjectId,
-          student_id: student.id,
-          cargo: typeof body.cargo === 'string' ? body.cargo : 'Estudiante',
-          activo: typeof body.activo === 'boolean' ? body.activo : true,
-        },
-        { transaction, returning: true }
+          replacements: {
+            project_id: numericProjectId,
+            student_id: studentId,
+            cargo:  typeof body.cargo  === 'string'  ? body.cargo  : 'Estudiante',
+            activo: typeof body.activo === 'boolean' ? body.activo : true,
+          },
+          type: QueryTypes.SELECT,
+          transaction,
+        }
       );
+      const enrollmentId = (enrollmentRows[0] as any).id;
 
       // Recalcular el estado del proyecto para que la barra de cupos cambie al instante.
       // personas = cantidad de inscripciones activas; team_members = lista de nombres activos.
@@ -667,7 +676,7 @@ class ProjectsService {
 
       // return updated project detail so callers can refresh UI easily
       const updated = await this.getProjectById(numericProjectId);
-      return { project: updated, student, enrollment };
+      return { project: updated, studentId, enrollmentId };
     } catch (error) {
       await transaction.rollback();
       throw error;
