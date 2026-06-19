@@ -10,7 +10,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
-    throw new Error(await response.text());
+    // Intentar parsear el JSON de error del backend; si falla, usar el texto plano
+    const text = await response.text();
+    try {
+      const json = JSON.parse(text);
+      throw new Error(json.error ?? json.message ?? text);
+    } catch {
+      throw new Error(text || `Error ${response.status}`);
+    }
   }
 
   return response.json() as Promise<T>;

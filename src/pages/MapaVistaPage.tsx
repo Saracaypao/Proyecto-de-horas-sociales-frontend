@@ -17,8 +17,8 @@ function normalizeVisibleStatus(status?: string | null): ProyectoMapa['estado'] 
 
 export default function MapaVistaPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [projects, setProjects] = useState<ProyectoMapa[]>(proyectosMapa);
-  const [markers, setMarkers] = useState(marcadoresMapa);
+  const [projects, setProjects] = useState<ProyectoMapa[]>([]);
+  const [markers, setMarkers] = useState<typeof marcadoresMapa>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [projectDetail, setProjectDetail] = useState<ProjectDetailResponse | null>(null);
 
@@ -101,12 +101,10 @@ export default function MapaVistaPage() {
 
         const mappedMarkers = [...departmentMarkers, ...projectMarkers];
 
-        setProjects(mappedProjects.length > 0 ? mappedProjects : proyectosMapa);
-        setMarkers(mappedMarkers.length > 0 ? mappedMarkers : marcadoresMapa);
-      } catch {
-        if (!active) return;
-        setProjects(proyectosMapa);
-        setMarkers(marcadoresMapa);
+        setProjects(mappedProjects);
+        setMarkers(mappedMarkers);
+      } catch (err) {
+        console.error('Error cargando datos del mapa:', err);
       } finally {
         if (active) setLoadingData(false);
       }

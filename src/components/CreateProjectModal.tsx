@@ -41,6 +41,10 @@ export default function CreateProjectModal({ onClose }: { onClose: () => void })
   function handleProjectFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setError('La imagen del proyecto no puede superar 5 MB');
+      return;
+    }
     setProjectFileName(file.name);
     void toDataUrl(file).then((dataUrl) => {
       setProjectPreviewUrl(dataUrl);
@@ -51,6 +55,10 @@ export default function CreateProjectModal({ onClose }: { onClose: () => void })
   function handleInstitutionFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setError('La imagen de la institución no puede superar 5 MB');
+      return;
+    }
     setInstitutionFileName(file.name);
     void toDataUrl(file).then((dataUrl) => {
       setInstitutionPreviewUrl(dataUrl);
@@ -274,7 +282,7 @@ export default function CreateProjectModal({ onClose }: { onClose: () => void })
                   />
                   <label className="field">
                     <span>
-                      Género 
+                      Género
                     </span>
                     <div className="field-input">
                       <select
