@@ -240,7 +240,7 @@ export default function CreateProjectModal({ onClose }: { onClose: () => void })
 
             <div className="student-assignment-list">
               {students.map((student, index) => (
-                <div className="student-assignment-row" key={`${index}-${student.carnet}`}>
+                <div className="student-assignment-row" key={index}>
                   <Field
                     label="Nombre del estudiante"
                     placeholder="Nombre completo"
@@ -272,18 +272,24 @@ export default function CreateProjectModal({ onClose }: { onClose: () => void })
                     onChange={(event) => handleStudentChange(index, 'email', event.target.value)}
                     required
                   />
-                  <div className="field-wrapper">
-                    <label className="field-label">Género</label>
-                    <select
-                      value={student.genero}
-                      onChange={(e) => handleStudentChange(index, 'genero', e.target.value)}
-                      className="field-input"
-                    >
-                      <option value="">Seleccione un género</option>
-                      <option value="Masculino">Masculino</option>
-                      <option value="Femenino">Femenino</option>
-                    </select>
-                  </div>
+                  <label className="field">
+                    <span>
+                      Género 
+                    </span>
+                    <div className="field-input">
+                      <select
+                        value={student.genero}
+                        onChange={(e) => handleStudentChange(index, 'genero', e.target.value)}
+                        required
+                        style={{ width: '100%', border: 'none', outline: 'none', background: 'transparent', font: 'inherit', cursor: 'pointer' }}
+                      >
+                        <option value="" disabled>Seleccione un género</option>
+                        <option value="Masculino">Masculino</option>
+                        <option value="Femenino">Femenino</option>
+                      </select>
+                    </div>
+                  </label>
+
                   {students.length > 1 ? (
                     <button
                       type="button"

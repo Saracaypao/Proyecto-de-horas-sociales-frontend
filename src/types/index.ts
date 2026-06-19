@@ -44,6 +44,8 @@ export type Estudiante = {
 export type ProyectoMapa = Proyecto & {
   resumen: string;
   personas: number;
+  hombres?: number;
+  mujeres?: number;
 };
 
 export type MarcadorMapa = {

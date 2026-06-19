@@ -1,19 +1,18 @@
 import { CalendarDays, ChevronLeft, MapPinned, Users } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
-import { AvatarGroup } from '../components/ui';
 import { clasificacionEstado, proyectosMapa, marcadoresMapa } from '../data/proyectos';
 import type { ProyectoMapa } from '../types';
-import { getMapMarkers, getProjects, getGenderByMunicipio, type ProjectDetailResponse } from '../services/api';
+import { getMapMarkers, getProjectsForMap, getGenderByMunicipio, type ProjectDetailResponse } from '../services/api';
 import { countGenders } from '../utils/genderDetect';
 import { coordenadasDepartamentos } from '../data/departamentos';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 
-function normalizeVisibleStatus(estado?: string | null, status?: string | null): ProyectoMapa['estado'] {
-  if (status === 'Cerrado' || estado === 'Cerrado') return 'Cerrado';
-  if (status === 'Activo' || estado === 'Activo') return 'Activo';
+function normalizeVisibleStatus(status?: string | null): ProyectoMapa['estado'] {
+  if (status === 'Cerrado') return 'Cerrado';
+  if (status === 'Activo') return 'Activo';
   return 'En progreso';
 }
 
@@ -23,30 +22,21 @@ export default function MapaVistaPage() {
   const [markers, setMarkers] = useState(marcadoresMapa);
   const [loadingData, setLoadingData] = useState(true);
   const [projectDetail, setProjectDetail] = useState<ProjectDetailResponse | null>(null);
+
   const proyectoId = searchParams.get('proyecto') ?? String(projects[0]?.id ?? '');
   const proyectoSeleccionado = projects.find((p) => String(p.id) === proyectoId) ?? projects[0];
   const mostrarDetalle = searchParams.has('proyecto');
 
+  // ─── Leer hombres/mujeres DIRECTO desde el proyecto (vienen de la BD via /projects/map)
   const getGeneroData = (projectId: string) => {
-  const marcadores = markers.filter((m) => m.id !== null && String(m.id) === projectId);
-    let totalHombres = 0;
-    let totalMujeres = 0;
-    marcadores.forEach((m) => {
-      totalHombres += m.hombres;
-      totalMujeres += m.mujeres;
-    });
-    if (totalHombres === 0 && totalMujeres === 0) {
-      const project = projects.find((p) => String(p.id) === projectId);
-      if (project && project.equipo.length > 0) {
-        const counts = countGenders(project.equipo);
-        return counts;
-      }
+    const project = projects.find((p) => String(p.id) === projectId);
+    if (project) {
+      return { hombres: project.hombres ?? 0, mujeres: project.mujeres ?? 0 };
     }
-    return { hombres: totalHombres, mujeres: totalMujeres };
+    return { hombres: 0, mujeres: 0 };
   };
 
   const focoMapa = '50% 50%';
-
   const mapRef = useRef<any>(null);
   const markersLayerRef = useRef<any>(null);
 
@@ -58,56 +48,59 @@ export default function MapaVistaPage() {
         setLoadingData(true);
 
         const [apiProjects, apiMarkers, apiGeneroMunicipio] = await Promise.all([
-          getProjects(),
+          getProjectsForMap(),   // trae hombres/mujeres reales desde enrollments
           getMapMarkers(),
           getGenderByMunicipio(),
         ]);
         if (!active) return;
 
+        // Mapear proyectos incluyendo hombres/mujeres reales desde la BD
         const mappedProjects: ProyectoMapa[] = apiProjects.map((project) => ({
           id: String(project.id),
           institucion: project.institution ?? 'Institución',
-          titulo: project.titulo,
+          titulo: project.nombre,
           ubicacion: project.ubicacion,
-          estado: normalizeVisibleStatus(project.estado, project.status),
-          carreras: project.carreras ?? [],
+          estado: normalizeVisibleStatus(project.status),
+          carreras: [],
           descripcion: project.descripcion ?? '',
           resumen: project.descripcion ?? '',
-          equipo: project.equipo ?? [],
-          personas: Number(project.personas ?? (project.equipo?.length ?? 0)),
+          equipo: [],
+          personas: Number((project.hombres ?? 0) + (project.mujeres ?? 0)),
+          hombres: Number(project.hombres ?? 0),   // ← conteo real desde BD
+          mujeres: Number(project.mujeres ?? 0),   // ← conteo real desde BD
         }));
 
-// Marcadores ligados a proyectos específicos (tabla map_markers, si existe)
-          const projectMarkers = apiMarkers
-            .filter((marker) => marker.projectId !== null)
-            .map((marker) => ({
-              id: String(marker.id),
-              projectId: String(marker.projectId),
-              label: marker.label,
-              hombres: Number(marker.hombres ?? 0),
-              mujeres: Number(marker.mujeres ?? 0),
-              lat: Number(marker.lat),
-              lng: Number(marker.lng),
-            }));
+        // Marcadores ligados a proyectos específicos
+        const projectMarkers = apiMarkers
+          .filter((marker) => marker.projectId !== null)
+          .map((marker) => ({
+            id: String(marker.id),
+            projectId: String(marker.projectId),
+            label: marker.label,
+            hombres: Number(marker.hombres ?? 0),
+            mujeres: Number(marker.mujeres ?? 0),
+            lat: Number(marker.lat),
+            lng: Number(marker.lng),
+          }));
 
-          // Marcadores por departamento, calculados dinámicamente desde la BD
-          const departmentMarkers = apiGeneroMunicipio
-            .map((row) => {
-              const coords = coordenadasDepartamentos[row.municipio];
-              if (!coords) return null;
-              return {
-                id: `depto-${row.municipio}`,
-                projectId: null as string | null,
-                label: row.municipio,
-                hombres: row.hombres,
-                mujeres: row.mujeres,
-                lat: coords.lat,
-                lng: coords.lng,
-              };
-            })
-            .filter((m): m is NonNullable<typeof m> => m !== null);
+        // Marcadores por departamento desde la BD
+        const departmentMarkers = apiGeneroMunicipio
+          .map((row) => {
+            const coords = coordenadasDepartamentos[row.municipio];
+            if (!coords) return null;
+            return {
+              id: `depto-${row.municipio}`,
+              projectId: null as string | null,
+              label: row.municipio,
+              hombres: row.hombres,
+              mujeres: row.mujeres,
+              lat: coords.lat,
+              lng: coords.lng,
+            };
+          })
+          .filter((m): m is NonNullable<typeof m> => m !== null);
 
-          const mappedMarkers = [...departmentMarkers, ...projectMarkers];
+        const mappedMarkers = [...departmentMarkers, ...projectMarkers];
 
         setProjects(mappedProjects.length > 0 ? mappedProjects : proyectosMapa);
         setMarkers(mappedMarkers.length > 0 ? mappedMarkers : marcadoresMapa);
@@ -121,12 +114,10 @@ export default function MapaVistaPage() {
     }
 
     loadMapData();
-
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, []);
 
+  // Cargar detalle cuando se selecciona un proyecto
   useEffect(() => {
     if (!mostrarDetalle || !proyectoId) {
       setProjectDetail(null);
@@ -164,13 +155,11 @@ export default function MapaVistaPage() {
           mapRef.current.remove();
           mapRef.current = null;
         }
-      } catch (e) {
-        // ignore
-      }
+      } catch { /* ignore */ }
     };
   }, []);
 
-  // Actualizar marcadores y centrar/zoom cuando cambie el proyecto seleccionado
+  // Actualizar marcadores del mapa cuando cambie selección
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !L?.layerGroup) return;
@@ -182,19 +171,20 @@ export default function MapaVistaPage() {
     }
 
     const markersToShow = mostrarDetalle && proyectoSeleccionado
-      ? markers.filter((m) => m.id !== null && String(m.id) === String(proyectoSeleccionado.id))
+      ? markers.filter((m) => m.projectId !== null && String(m.projectId) === String(proyectoSeleccionado.id))
       : markers;
 
     const groups: Record<string, { latSum: number; lngSum: number; hombres: number; mujeres: number; count: number }> = {};
     markersToShow.forEach((m) => {
-      if (!groups[m.id]) {
-        groups[m.id] = { latSum: 0, lngSum: 0, hombres: 0, mujeres: 0, count: 0 };
+      const key = m.id;
+      if (!groups[key]) {
+        groups[key] = { latSum: 0, lngSum: 0, hombres: 0, mujeres: 0, count: 0 };
       }
-      groups[m.id].latSum += m.lat;
-      groups[m.id].lngSum += m.lng;
-      groups[m.id].hombres += m.hombres;
-      groups[m.id].mujeres += m.mujeres;
-      groups[m.id].count += 1;
+      groups[key].latSum += m.lat;
+      groups[key].lngSum += m.lng;
+      groups[key].hombres += m.hombres;
+      groups[key].mujeres += m.mujeres;
+      groups[key].count += 1;
     });
 
     Object.keys(groups).forEach((id) => {
@@ -219,7 +209,7 @@ export default function MapaVistaPage() {
     if (mostrarDetalle) {
       const pts = markersToShow.map((m) => [m.lat, m.lng]);
       if (pts.length === 1) {
-        map.setView(pts[0], 10);
+        map.setView(pts[0] as any, 10);
       } else if (pts.length > 1) {
         const bounds = L.latLngBounds(pts as any);
         map.fitBounds(bounds.pad(0.5));
@@ -242,7 +232,6 @@ export default function MapaVistaPage() {
               {projects.map((project) => {
                 const generoData = getGeneroData(String(project.id));
                 const estadoClass = clasificacionEstado[project.estado] ?? 'recruiting';
-                // Generar iniciales del equipo para avatares
                 const teamInitials = project.equipo.slice(0, 3).map((nombre) =>
                   nombre.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase()
                 );
@@ -250,7 +239,6 @@ export default function MapaVistaPage() {
 
                 return (
                   <article className="map-project-card" key={project.id}>
-                    {/* Header: estado + ubicación */}
                     <div className="map-card-header">
                       <span className={`pill status ${estadoClass}`}>{project.estado}</span>
                       <span className="map-card-location">
@@ -259,16 +247,10 @@ export default function MapaVistaPage() {
                       </span>
                     </div>
 
-                    {/* Institución */}
                     <p className="map-card-institution">{project.institucion.toUpperCase()}</p>
-
-                    {/* Título */}
                     <h3 className="map-card-title">{project.titulo}</h3>
-
-                    {/* Descripción */}
                     <p className="map-card-description">{project.descripcion || project.resumen}</p>
 
-                    {/* Footer: género + avatares + ver detalles */}
                     <div className="map-card-footer">
                       <div className="map-card-gender">
                         <span className="gender-item">
@@ -316,7 +298,6 @@ export default function MapaVistaPage() {
           <ProjectMapDetail
             project={proyectoSeleccionado}
             onReset={() => setSearchParams({})}
-            generoData={getGeneroData(String(proyectoSeleccionado.id))}
             projectDetail={projectDetail}
           />
         )}
@@ -331,7 +312,6 @@ export default function MapaVistaPage() {
         </div>
         <div className={`map-scene ${mostrarDetalle ? 'focused' : ''}`} style={{ transformOrigin: focoMapa, position: 'relative' }}>
           <div id="leaflet-map" className="map-iframe" style={{ position: 'absolute', inset: 0 }} />
-
           <div className="map-reset-floating">
             <button className="secondary-btn" type="button" onClick={() => setSearchParams({})}>
               <ChevronLeft size={18} />
@@ -348,15 +328,14 @@ export default function MapaVistaPage() {
 function ProjectMapDetail({
   project,
   onReset,
-  generoData,
   projectDetail,
 }: {
   project: ProyectoMapa;
   onReset: () => void;
-  generoData: { hombres: number; mujeres: number };
   projectDetail: ProjectDetailResponse | null;
 }) {
   const projectImage = project.imagen ?? (projectDetail?.imagen ?? null);
+
   const formatDate = (value: string | null | undefined) => {
     if (!value) return 'Sin fecha';
     const date = new Date(value);
@@ -364,15 +343,20 @@ function ProjectMapDetail({
     return new Intl.DateTimeFormat('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }).format(date);
   };
 
-  const allNames = projectDetail
-    ? [
-        ...(projectDetail.estudiantes ?? []).map((s) => s.nombre ?? ''),
-        ...(projectDetail.equipo ?? []),
-      ].filter(Boolean)
-    : project.equipo;
-  const computedGender = countGenders(allNames);
-  const displayHombres = generoData.hombres > 0 ? generoData.hombres : computedGender.hombres;
-  const displayMujeres = generoData.mujeres > 0 ? generoData.mujeres : computedGender.mujeres;
+  // ─── Contar géneros desde campo real de cada estudiante (no heurística de nombres)
+  const { displayHombres, displayMujeres } = (() => {
+    if (projectDetail?.estudiantes && projectDetail.estudiantes.length > 0) {
+      let hombres = 0;
+      let mujeres = 0;
+      for (const s of projectDetail.estudiantes) {
+        if (s.genero === 'Masculino') hombres++;
+        else if (s.genero === 'Femenino') mujeres++;
+      }
+      return { displayHombres: hombres, displayMujeres: mujeres };
+    }
+    // Fallback: usar los conteos que vinieron del endpoint /projects/map
+    return { displayHombres: project.hombres ?? 0, displayMujeres: project.mujeres ?? 0 };
+  })();
 
   const estudiantesDetalle = projectDetail?.estudiantes ?? [];
   const equipoNombres = projectDetail?.equipo ?? project.equipo;
@@ -390,18 +374,28 @@ function ProjectMapDetail({
         <div className="project-detail-card-single">
           {projectImage ? (
             <div className="project-detail-hero">
-              <img src={projectImage} alt={project.titulo} className="project-main-img" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+              <img
+                src={projectImage}
+                alt={project.titulo}
+                className="project-main-img"
+                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+              />
             </div>
           ) : null}
 
           <div className="detail-body">
-            <span className="inst-name">{(projectDetail?.institution ?? project.institucion).toUpperCase()}</span>
+            <span className="inst-name">
+              {(projectDetail?.institution ?? project.institucion).toUpperCase()}
+            </span>
             <h2 className="detail-title">{projectDetail?.titulo ?? project.titulo}</h2>
 
             <div className="detail-meta">
               <p><MapPinned size={14} /> {projectDetail?.ubicacion ?? project.ubicacion}</p>
               {projectDetail?.fechaInicio || projectDetail?.fechaCierre ? (
-                <p><CalendarDays size={14} /> {formatDate(projectDetail.fechaInicio)} – {formatDate(projectDetail.fechaCierre)}</p>
+                <p>
+                  <CalendarDays size={14} />
+                  {' '}{formatDate(projectDetail.fechaInicio)} – {formatDate(projectDetail.fechaCierre)}
+                </p>
               ) : null}
               <p>
                 <Users size={14} />
@@ -409,6 +403,7 @@ function ProjectMapDetail({
               </p>
             </div>
 
+            {/* Bloque de género */}
             <div style={{ backgroundColor: '#f5f5f5', padding: '12px 16px', borderRadius: '8px', marginTop: '16px', marginBottom: '16px' }}>
               <p style={{ fontSize: '13px', fontWeight: '600', marginBottom: '8px', color: '#333' }}>Estudiantes</p>
               <div style={{ display: 'flex', gap: '20px' }}>
@@ -452,9 +447,9 @@ function ProjectMapDetail({
                         </div>
                         <div style={{ height: 1, background: '#e8edf8', marginBottom: 8 }} />
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                          {student.carrera ? <p style={{ margin: 0, fontSize: '0.76rem', color: '#687182', fontWeight: 600 }}>{student.carrera}</p> : null}
-                          {student.carnet ? <p style={{ margin: 0, fontSize: '0.73rem', color: '#9aa3b5' }}>Carnet: {student.carnet}</p> : null}
-                          {student.email ? <p style={{ margin: 0, fontSize: '0.70rem', color: '#9aa3b5', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{student.email}</p> : null}
+                          {student.carrera && <p style={{ margin: 0, fontSize: '0.76rem', color: '#687182', fontWeight: 600 }}>{student.carrera}</p>}
+                          {student.carnet && <p style={{ margin: 0, fontSize: '0.73rem', color: '#9aa3b5' }}>Carnet: {student.carnet}</p>}
+                          {student.email && <p style={{ margin: 0, fontSize: '0.70rem', color: '#9aa3b5', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{student.email}</p>}
                         </div>
                       </div>
                     );

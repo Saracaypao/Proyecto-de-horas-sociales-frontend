@@ -7,6 +7,7 @@ import Student from '../../../../models/student.model.js';
 import MapMarker from '../../../../models/marker.model.js';
 import { HttpError } from '../../../../utils/httpError.js';
 import type { ProjectStatus } from '../../../../types/domain.js';
+import { pool } from '../../../../core/config/pool.js';
 
 const allowedStatuses: ProjectStatus[] = ['Activo', 'En planificación', 'En convocatoria', 'Cerrado'];
 
@@ -193,8 +194,15 @@ function toProjectDetailDTO(
 ) {
   const plain = typeof project.get === 'function' ? project.get({ plain: true }) : project;
   const base = toProjectDTO(plain);
-  const markers = Array.isArray(plain.markers) ? plain.markers : [];
-  const genderTotals = sumMarkerValues(markers);
+  // Contar género desde los enrollments reales, no desde map_markers estáticos
+  const genderTotals = enrollments.reduce(
+    (acc, e) => {
+      if (e.genero === 'Masculino') acc.hombres += 1;
+      else if (e.genero === 'Femenino') acc.mujeres += 1;
+      return acc;
+    },
+    { hombres: 0, mujeres: 0 }
+  );
   const activeEnrollments = enrollments.length;
   const cuposTotales = base.cuposTotales;
   const cuposOcupados = activeEnrollments;
@@ -222,10 +230,27 @@ function toProjectDetailDTO(
 
 function toProjectDTO(project: any) {
   const plain = typeof project.get === 'function' ? project.get({ plain: true }) : project;
-  const activeEnrollments = countActiveEnrollmentsFromPlain(plain);
-  const personas = activeEnrollments ?? plain.personas ?? 0;
+  
+  // Filtrar solo las inscripciones verdaderamente activas que traiga el modelo
+  const enrollments = Array.isArray(plain.enrollments) 
+    ? plain.enrollments.filter((e: any) => e?.activo !== false) 
+    : [];
+    
+  const personas = enrollments.length ?? plain.personas ?? 0;
   const cupos = plain.cupos ?? null;
   const capacity = formatCapacity(personas, cupos);
+
+  // Calcular el género real basado en los estudiantes incluidos
+  const genderTotals = enrollments.reduce(
+    (acc: { hombres: number; mujeres: number }, e: any) => {
+      const genero = e.student?.genero;
+      if (genero === 'Masculino') acc.hombres += 1;
+      else if (genero === 'Femenino') acc.mujeres += 1;
+      return acc;
+    },
+    { hombres: 0, mujeres: 0 }
+  );
+
   return {
     id: plain.id,
     institutionId: plain.institution_id,
@@ -250,16 +275,19 @@ function toProjectDTO(project: any) {
     equipo: plain.team_members ?? [],
     personas,
     institution: plain.institution?.nombre ?? plain.institutionName ?? '',
+    // Enviamos los géneros reales calculados para las cards del listado
+    hombres: genderTotals.hombres,
+    mujeres: genderTotals.mujeres,
   };
 }
 
 function toProjectListDTO(project: any) {
   const payload = toProjectDTO(project);
   const { image, ...listPayload } = payload;
-  return listPayload;
+  return toProjectDTO(project);
 }
 
-function toProjectMapDTO(project: any) {
+/*function toProjectMapDTO(project: any) {
   const plain = typeof project.get === 'function' ? project.get({ plain: true }) : project;
   const markers = Array.isArray(plain.markers) ? plain.markers : [];
   const totals = sumMarkerValues(markers);
@@ -274,15 +302,13 @@ function toProjectMapDTO(project: any) {
     hombres: totals.hombres,
     mujeres: totals.mujeres,
   };
-}
+}*/
 
 class ProjectsService {
   public listProjects = async (filters: { search?: string; status?: string; institutionId?: string; location?: string; faculty?: string } = {}) => {
     const where: any = {};
 
     if (filters.institutionId) where.institution_id = filters.institutionId;
-
-    const search = filters.search?.trim();
 
     const projects = await Project.findAll({
       where,
@@ -296,8 +322,16 @@ class ProjectsService {
         {
           model: ProjectEnrollment,
           as: 'enrollments',
+          where: { activo: true }, // <--- Crucial: Solo inscripciones activas
           required: false,
-          attributes: ['id', 'activo'],
+          include: [
+            {
+              model: Student,
+              as: 'student',
+              required: true,
+              attributes: ['id', 'genero', 'nombre'], // Traemos el género y nombre real
+            },
+          ],
         },
       ],
       order: [['created_at', 'DESC']],
@@ -305,6 +339,7 @@ class ProjectsService {
 
     const mapped = projects.map(toProjectListDTO);
 
+    const search = filters.search?.trim();
     const loweredSearch = search?.toLowerCase();
     const loweredLocation = filters.location?.trim().toLowerCase();
     const normalizedStatus = filters.status?.trim().toLowerCase();
@@ -324,6 +359,7 @@ class ProjectsService {
   };
 
   public listProjectsForMap = async () => {
+    // Traemos los proyectos incluyendo directamente sus estudiantes asignados activos
     const projects = await Project.findAll({
       include: [
         {
@@ -333,16 +369,54 @@ class ProjectsService {
           required: true,
         },
         {
-          model: MapMarker,
-          as: 'markers',
-          required: true,
-          attributes: ['id', 'hombres', 'mujeres'],
+          model: ProjectEnrollment,
+          as: 'enrollments',
+          where: { activo: true }, // Solo inscripciones vigentes
+          required: false,         // Permite proyectos vacíos en el mapa sin tumbar la consulta
+          include: [
+            {
+              model: Student,
+              as: 'student',
+              required: true,
+              attributes: ['genero'], // Solo nos interesa el género para contar
+            },
+          ],
         },
       ],
       order: [['created_at', 'DESC']],
     });
 
-    return projects.map(toProjectMapDTO);
+    // Mapeamos y contamos en memoria de forma segura y exacta
+    return projects.map((project) => {
+      const plain = typeof project.get === 'function' ? project.get({ plain: true }) : project;
+      
+      const enrollments = Array.isArray(plain.enrollments) ? plain.enrollments : [];
+      
+      // Contadores iniciales
+      let hombres = 0;
+      let mujeres = 0;
+
+      // Iteramos sobre las inscripciones reales y activas del proyecto
+      for (const enrollment of enrollments) {
+        const genero = enrollment.student?.genero;
+        if (genero === 'Masculino') {
+          hombres++;
+        } else if (genero === 'Femenino') {
+          mujeres++;
+        }
+      }
+
+      return {
+        id: plain.id,
+        institution: plain.institution?.nombre ?? '',
+        status: normalizeProjectStatus(plain.estado),
+        nombre: plain.titulo,
+        ubicacion: plain.ubicacion,
+        descripcion: plain.descripcion,
+        hombres,
+        mujeres,
+      };
+    });
   };
 
   public listDirectoryProjects = async (filters: {
@@ -372,7 +446,7 @@ class ProjectsService {
     const project = await Project.findByPk(id, {
       include: [
         { model: Institution, as: 'institution', attributes: ['id', 'nombre', 'sigla'], required: true },
-        { model: MapMarker, as: 'markers', required: false, attributes: ['id', 'hombres', 'mujeres'] },
+        //{ model: MapMarker, as: 'markers', required: false, attributes: ['id', 'hombres', 'mujeres'] },
       ],
     });
 
