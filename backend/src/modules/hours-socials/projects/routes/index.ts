@@ -217,11 +217,8 @@ router.post(
 		'carreras',
 		'titulo',
 		'ubicacion',
-		'fechaInicio',
-		'fechaCierre',
-		'cupos',
 		'descripcion',
-		'image',
+		// fechaInicio, fechaCierre y cupos son opcionales
 	]),
 	controller.createProject
 );
