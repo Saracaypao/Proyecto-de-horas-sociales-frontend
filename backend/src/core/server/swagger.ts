@@ -8,7 +8,7 @@ export const swaggerSpec = swaggerJSDoc({
       version: '2.0.0',
       description: 'API para instituciones, proyectos, estudiantes y mapas de horas sociales.',
     },
-    servers: [{ url: 'http://localhost:4000', description: 'Desarrollo local' }],
+    servers: [{ url: 'https://proyecto-de-horas-sociales-frontend.onrender.com', description: 'Desarrollo local' }],
   },
   apis: ['./src/modules/**/routes/index.ts'],
 });

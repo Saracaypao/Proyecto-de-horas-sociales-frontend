@@ -77,7 +77,7 @@ npm run migrate:revert
 
 Con el backend encendido:
 
-- URL: `http://localhost:4000/api-docs`
+- URL: `https://proyecto-de-horas-sociales-frontend.onrender.com/api-docs`
 
 ## Endpoints principales
 
@@ -160,5 +160,5 @@ npm run dev
 
 Prueba:
 
-- `http://localhost:4000/api/health`
-- `http://localhost:4000/api-docs`
+- `https://proyecto-de-horas-sociales-frontend.onrender.com/api/health`
+- `https://proyecto-de-horas-sociales-frontend.onrender.com/api-docs`

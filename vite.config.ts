@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-const backendTarget = process.env.VITE_BACKEND_URL ?? 'http://localhost:4000';
+const backendTarget = process.env.VITE_BACKEND_URL ?? 'https://proyecto-de-horas-sociales-frontend.onrender.com';
 
 export default defineConfig({
   plugins: [react()],
