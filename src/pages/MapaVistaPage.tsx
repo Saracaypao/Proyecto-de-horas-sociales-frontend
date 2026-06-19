@@ -1,7 +1,7 @@
 import { CalendarDays, ChevronLeft, MapPinned, Users } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
-import { clasificacionEstado, proyectosMapa, marcadoresMapa } from '../data/proyectos';
+import { clasificacionEstado, marcadoresMapa } from '../data/proyectos';
 import type { ProyectoMapa } from '../types';
 import { getMapMarkers, getProjectsForMap, getGenderByMunicipio, type ProjectDetailResponse } from '../services/api';
 import { coordenadasDepartamentos } from '../data/departamentos';
