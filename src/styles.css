@@ -4344,11 +4344,11 @@ input[type="checkbox"].check:checked {
 .map-project-card {
   background: #ffffff;
   border: 1px solid #e4eaf5;
-  border-radius: 16px;
-  padding: 16px;
+  border-radius: 18px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 9px;
   box-shadow: 0 2px 8px rgba(28, 41, 71, 0.06), 0 1px 3px rgba(28, 41, 71, 0.04);
   transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
   cursor: default;
@@ -4371,15 +4371,15 @@ input[type="checkbox"].check:checked {
 .map-card-header .pill.status {
   margin-left: 0 !important;
   flex-shrink: 0;
-  font-size: 0.78rem;
-  height: 26px;
-  padding: 0 10px;
+  font-size: 0.82rem;
+  height: 28px;
+  padding: 0 12px;
 }
 .map-card-location {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.78rem;
+  font-size: 0.82rem;
   color: #687182;
   font-weight: 500;
 }
@@ -4387,7 +4387,7 @@ input[type="checkbox"].check:checked {
 /* Institución */
 .map-card-institution {
   margin: 0;
-  font-size: 0.72rem;
+  font-size: 0.76rem;
   font-weight: 800;
   letter-spacing: 0.08em;
   color: #2d63e2;
@@ -4398,7 +4398,7 @@ input[type="checkbox"].check:checked {
 /* Título */
 .map-card-title {
   margin: 0;
-  font-size: 0.98rem;
+  font-size: 1.06rem;
   font-weight: 700;
   color: #162033;
   line-height: 1.35;
@@ -4408,9 +4408,9 @@ input[type="checkbox"].check:checked {
 /* Descripción */
 .map-card-description {
   margin: 0;
-  font-size: 0.81rem;
+  font-size: 0.86rem;
   color: #687182;
-  line-height: 1.55;
+  line-height: 1.6;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
@@ -4423,21 +4423,21 @@ input[type="checkbox"].check:checked {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin-top: 6px;
-  padding-top: 10px;
+  margin-top: 8px;
+  padding-top: 12px;
   border-top: 1px solid #f0f4fb;
   flex-wrap: wrap;
 }
 .map-card-gender {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
 }
 .gender-item {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 0.78rem;
+  font-size: 0.83rem;
   color: #475569;
 }
 .gender-item strong {
@@ -4445,8 +4445,8 @@ input[type="checkbox"].check:checked {
   color: #162033;
 }
 .gender-dot {
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   flex-shrink: 0;
 }
@@ -4465,13 +4465,13 @@ input[type="checkbox"].check:checked {
   align-items: center;
 }
 .map-avatar {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   border: 2px solid #ffffff;
   background: linear-gradient(135deg, #3972f0, #21c08a);
   color: #ffffff;
-  font-size: 0.65rem;
+  font-size: 0.70rem;
   font-weight: 800;
   display: inline-grid;
   place-items: center;
@@ -4481,7 +4481,7 @@ input[type="checkbox"].check:checked {
 .map-avatar-extra {
   background: #e8edf8;
   color: #475569;
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   font-weight: 700;
 }
 .map-card-detail-link {
@@ -4489,7 +4489,7 @@ input[type="checkbox"].check:checked {
   border: none;
   padding: 0;
   cursor: pointer;
-  font-size: 0.80rem;
+  font-size: 0.85rem;
   font-weight: 700;
   color: #2d63e2;
   white-space: nowrap;
