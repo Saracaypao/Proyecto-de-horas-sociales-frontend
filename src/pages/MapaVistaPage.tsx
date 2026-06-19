@@ -236,40 +236,70 @@ export default function MapaVistaPage() {
               <h2 className="sidebar-title">Proyectos activos</h2>
             </div>
 
-            {loadingData ? <p className="muted">Cargando mapa...</p> : null}
+            {loadingData ? <p className="muted" style={{ padding: '0 16px' }}>Cargando proyectos...</p> : null}
 
-            <div className="stack-list cards-scroll sidebar-projects-list">
+            <div className="sidebar-projects-list">
               {projects.map((project) => {
                 const generoData = getGeneroData(String(project.id));
+                const estadoClass = clasificacionEstado[project.estado] ?? 'recruiting';
+                // Generar iniciales del equipo para avatares
+                const teamInitials = project.equipo.slice(0, 3).map((nombre) =>
+                  nombre.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase()
+                );
+                const extraCount = project.personas > 3 ? project.personas - 3 : 0;
+
                 return (
-                  <article className="project-summary-card" key={project.id}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                      <div className={`pill status ${clasificacionEstado[project.estado]}`}>{project.estado}</div>
-                      <p className="muted with-icon" style={{ margin: 0, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                        <MapPinned size={12} />
+                  <article className="map-project-card" key={project.id}>
+                    {/* Header: estado + ubicación */}
+                    <div className="map-card-header">
+                      <span className={`pill status ${estadoClass}`}>{project.estado}</span>
+                      <span className="map-card-location">
+                        <MapPinned size={11} />
                         {project.ubicacion}
-                      </p>
-                    </div>
-                    <div className="project-summary-topline">{project.institucion}</div>
-                    <h3>{project.titulo}</h3>
-                    <p className="summary-copy">{project.resumen}</p>
-
-                    <div className="gender-stats" style={{ display: 'flex', gap: '16px', marginTop: '12px', marginBottom: '12px', fontSize: '13px' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#007bff' }} />
-                        Hombres: {generoData.hombres}
-                      </span>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#dc3545' }} />
-                        Mujeres: {generoData.mujeres}
                       </span>
                     </div>
 
-                    <div className="avatar-row">
-                      <AvatarGroup count={project.personas} />
-                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    {/* Institución */}
+                    <p className="map-card-institution">{project.institucion.toUpperCase()}</p>
+
+                    {/* Título */}
+                    <h3 className="map-card-title">{project.titulo}</h3>
+
+                    {/* Descripción */}
+                    <p className="map-card-description">{project.descripcion || project.resumen}</p>
+
+                    {/* Footer: género + avatares + ver detalles */}
+                    <div className="map-card-footer">
+                      <div className="map-card-gender">
+                        <span className="gender-item">
+                          <span className="gender-dot men" />
+                          Hombres: <strong>{generoData.hombres}</strong>
+                        </span>
+                        <span className="gender-item">
+                          <span className="gender-dot women" />
+                          Mujeres: <strong>{generoData.mujeres}</strong>
+                        </span>
+                      </div>
+                      <div className="map-card-actions">
+                        <div className="map-card-avatars">
+                          {teamInitials.map((initials, i) => (
+                            <span
+                              key={initials + i}
+                              className="map-avatar"
+                              style={{ marginLeft: i > 0 ? '-8px' : 0 }}
+                              title={project.equipo[i]}
+                            >
+                              {initials}
+                            </span>
+                          ))}
+                          {extraCount > 0 && (
+                            <span className="map-avatar map-avatar-extra" style={{ marginLeft: '-8px' }}>
+                              +{extraCount}
+                            </span>
+                          )}
+                        </div>
                         <button
-                          className="text-link link-button"
+                          className="map-card-detail-link"
                           type="button"
                           onClick={() => setSearchParams({ proyecto: String(project.id) })}
                         >
