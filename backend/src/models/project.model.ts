@@ -20,6 +20,9 @@ export interface ProjectAttributes {
   personas: number;
   created_at?: Date;
   updated_at?: Date;
+  institution?: any;
+  enrollments?: any[];
+  markers?: any[];
 }
 
 export interface ProjectCreationAttributes
@@ -43,6 +46,9 @@ class Project extends Model<ProjectAttributes, ProjectCreationAttributes> implem
   declare personas: number;
   declare created_at: Date;
   declare updated_at: Date;
+  declare institution?: any;
+  declare enrollments?: any[];
+  declare markers?: any[];
 
   public static associate(models: any): void {
     Project.belongsTo(models.Institution, {
