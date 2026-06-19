@@ -11,6 +11,6 @@ function required(name: string, fallback?: string) {
 export const env = {
   port: Number(process.env.PORT ?? 4000),
   databaseUrl: required('DATABASE_URL', 'postgresql://postgres:postgres@localhost:5432/horas_sociales_db'),
-  corsOrigin: process.env.CORS_ORIGIN ??  'https://proyecto-de-horas-sociales-frontend-one.vercel.app',
+  corsOrigin: process.env.CORS_ORIGIN ??  'http://localhost:5173',
   nodeEnv: process.env.NODE_ENV ?? 'development',
 };
