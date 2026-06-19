@@ -109,7 +109,7 @@ export function ProyectosPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('Todos');
   const [selectedLocation, setSelectedLocation] = useState('Todas');
-  const [sortBy, setSortBy] = useState<'recentes' | 'titulo' | 'ubicacion'>('recentes');
+  const [sortBy] = useState<'recentes' | 'titulo' | 'ubicacion'>('recentes');
   const [projectsData, setProjectsData] = useState<Proyecto[]>(
     instituciones.flatMap((institution) => institution.proyectos)
   );

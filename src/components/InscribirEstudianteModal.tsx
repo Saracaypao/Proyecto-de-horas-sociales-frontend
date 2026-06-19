@@ -18,7 +18,7 @@ export default function InscribirEstudianteModal({
   const [carnet, setCarnet] = useState('');
   const [career, setCareer] = useState('');
   const [email, setEmail] = useState('');
-  const [gender, setGender] = useState('');
+  const [gender, setGender] = useState<'Masculino' | 'Femenino' | ''>('');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,7 +35,7 @@ export default function InscribirEstudianteModal({
         genero: gender || undefined,
         email: email || undefined,
       });
-      try { onEnrolled?.(resp?.project ?? resp); } catch {}
+      try { onEnrolled?.(resp?.project ?? resp); } catch { }
       onClose();
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : 'No se pudo inscribir al estudiante');
@@ -71,7 +71,9 @@ export default function InscribirEstudianteModal({
             <label className="field-label">Género</label>
             <select
               value={gender}
-              onChange={(e) => setGender(e.target.value)}
+              onChange={(e) =>
+                setGender(e.target.value as '' | 'Masculino' | 'Femenino')
+              }
               className="field-input"
             >
               <option value="">Seleccione un género</option>

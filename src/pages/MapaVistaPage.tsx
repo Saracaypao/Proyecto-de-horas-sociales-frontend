@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react';
 import { clasificacionEstado, proyectosMapa, marcadoresMapa } from '../data/proyectos';
 import type { ProyectoMapa } from '../types';
 import { getMapMarkers, getProjectsForMap, getGenderByMunicipio, type ProjectDetailResponse } from '../services/api';
-import { countGenders } from '../utils/genderDetect';
 import { coordenadasDepartamentos } from '../data/departamentos';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';

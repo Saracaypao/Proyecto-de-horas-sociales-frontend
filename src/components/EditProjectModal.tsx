@@ -4,23 +4,6 @@ import { toDataUrl, parseCsvList, updateProject } from '../services/api';
 import { Field } from './ui';
 import type { ProjectDetailResponse } from '../services/api';
 
-type EditProjectPayload = {
-  institutionName: string;
-  institutionType: string;
-  institutionLocation: string;
-  institutionDescription: string;
-  institutionImage?: string | null;
-  facultad: string;
-  carreras: string[];
-  titulo: string;
-  ubicacion: string;
-  descripcion: string;
-  fechaInicio?: string;
-  fechaCierre?: string;
-  cupos?: number;
-  projectImage?: string | null;
-};
-
 export default function EditProjectModal({
   project,
   onClose,

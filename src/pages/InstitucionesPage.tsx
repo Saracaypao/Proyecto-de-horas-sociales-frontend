@@ -1,6 +1,5 @@
 import { MapPinned, Search, SlidersHorizontal } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useParams } from 'react-router-dom';
 import InstitutionCard from '../components/InstitutionCard';
 import { BackLink } from '../components/ui';
