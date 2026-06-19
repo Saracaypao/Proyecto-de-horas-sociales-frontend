@@ -37,8 +37,9 @@
 
 /* Contenedor lateral específico para la columna de proyectos activos */
 .sidebar-projects-list {
-  /* Calculamos la altura restando el header y el título de 'Proyectos activos' */
-  height: calc(100vh - 150px);
+  /* Crece para ocupar el espacio restante dentro del flex container padre */
+  flex: 1 1 auto;
+  min-height: 0; /* CRÍTICO: permite que flex child haga scroll */
 
   /* Permite el scroll vertical */
   overflow-y: auto;
@@ -53,8 +54,8 @@
   /* Flex para apilar las cards */
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 10px;
+  gap: 16px;
+  padding: 8px 16px 20px;
 }
 
 /* Personalización para navegadores Webkit (Chrome, Edge, Safari) */
@@ -67,3 +68,15 @@
   border-radius: 10px;
 }
 
+
+/* ── Responsive: mobile y tablet (≤ 1320px) ─────────────────── */
+@media (max-width: 1320px) {
+  .sidebar-projects-list {
+    flex: none !important;
+    height: auto !important;
+    max-height: 55vh;
+    overflow-y: auto;
+    gap: 14px;
+    padding: 8px 12px 16px;
+  }
+}
