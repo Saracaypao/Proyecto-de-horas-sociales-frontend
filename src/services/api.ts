@@ -355,3 +355,36 @@ export type GeneroMunicipioRow = { municipio: string; hombres: number; mujeres: 
 export function getGenderByMunicipio() {
   return request<GeneroMunicipioRow[]>('/students/genero-municipio');
 }
+
+export type RegisterPayload = {
+  nombre: string;
+  apellido: string;
+  correo: string;
+  password: string;
+};
+
+export type LoginPayload = {
+  correo: string;
+  password: string;
+};
+
+export type AuthUser = {
+  id: string;
+  nombre: string;
+  apellido: string;
+  correo: string;
+};
+
+export function registerUser(payload: RegisterPayload) {
+  return request<AuthUser>('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function loginUser(payload: LoginPayload) {
+  return request<AuthUser>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}

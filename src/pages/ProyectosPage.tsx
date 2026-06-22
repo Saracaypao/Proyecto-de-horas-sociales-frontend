@@ -28,7 +28,6 @@ import {
 } from '../services/api';
 import type { Proyecto } from '../types';
 
-// Helper: resolve multiple possible image fields returned by API
 function resolveProjectImage(project: any) {
   return project?.imagen ?? project?.image ?? project?.imageUrl ?? project?.projectImage ?? null;
 }
@@ -114,6 +113,7 @@ export function ProyectosPage() {
     instituciones.flatMap((institution) => institution.proyectos)
   );
   const [loading, setLoading] = useState(true);
+  const [successToast, setSuccessToast] = useState<string | null>(null); // ← NUEVO
   const [error, setError] = useState('');
 
   const mapStatus = (status?: string, estado?: string): Proyecto['estado'] => {
@@ -174,6 +174,12 @@ export function ProyectosPage() {
     } catch {
       void fetchProjects();
     }
+  }
+
+  // ← NUEVO
+  function showToast(msg: string) {
+    setSuccessToast(msg);
+    setTimeout(() => setSuccessToast(null), 3000);
   }
 
   useEffect(() => {
@@ -274,7 +280,18 @@ export function ProyectosPage() {
         </section>
       </div>
 
-      {modalNuevo ? <CreateProjectModal onClose={() => setSearchParams({})} /> : null}
+      {/* ← ACTUALIZADO: onSaved refresca la lista y muestra toast */}
+      {modalNuevo ? (
+        <CreateProjectModal
+          onClose={() => setSearchParams({})}
+          onSaved={() => {
+            setSearchParams({});
+            void fetchProjects();
+            showToast('✓ Proyecto creado correctamente');
+          }}
+        />
+      ) : null}
+
       {projectToEnroll ? (
         <InscribirEstudianteModal
           projectId={projectToEnroll.id}
@@ -294,6 +311,19 @@ export function ProyectosPage() {
           }}
         />
       ) : null}
+
+      {/* ← NUEVO: Toast de éxito flotante */}
+      {successToast && (
+        <div style={{
+          position: 'fixed', bottom: '1.5rem', right: '1.5rem',
+          background: '#276749', color: '#fff',
+          padding: '0.75rem 1.25rem', borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          fontSize: '0.9rem', zIndex: 9999,
+        }}>
+          {successToast}
+        </div>
+      )}
     </div>
   );
 }
@@ -352,6 +382,13 @@ export function ProyectoDetallePage() {
   const [showEdit, setShowEdit] = useState(false);
   const [statusDraft, setStatusDraft] = useState<VisibleProjectStatus>('En progreso');
   const [savingStatus, setSavingStatus] = useState(false);
+  const [successToast, setSuccessToast] = useState<string | null>(null); // ← NUEVO
+
+  // ← NUEVO
+  function showToast(msg: string) {
+    setSuccessToast(msg);
+    setTimeout(() => setSuccessToast(null), 3000);
+  }
 
   function loadProject(active: { value: boolean }) {
     setLoading(true);
@@ -431,7 +468,6 @@ export function ProyectoDetallePage() {
   const cuposTotales = project.cuposTotales ?? null;
   const cuposDisponibles = cuposTotales != null ? Math.max(cuposTotales - cuposOcupados, 0) : null;
 
-  // Conteo de género: usa el campo genero real si existe, si no usa hombres/mujeres del backend
   const estudiantesConGenero = (project.estudiantes ?? []).filter(
     (s: any) => s.genero === 'Masculino' || s.genero === 'Femenino'
   );
@@ -483,6 +519,7 @@ export function ProyectoDetallePage() {
         </button>
       </div>
 
+      {/* ← ACTUALIZADO: onSaved recarga datos y muestra toast */}
       {showEdit ? (
         <EditProjectModal
           project={project}
@@ -491,6 +528,7 @@ export function ProyectoDetallePage() {
             setShowEdit(false);
             const active = { value: true };
             loadProject(active);
+            showToast('✓ Proyecto actualizado correctamente');
           }}
         />
       ) : null}
@@ -511,7 +549,7 @@ export function ProyectoDetallePage() {
         <img
           src={resolveProjectImage(project) ?? '/images/ProjectsDirectoryDetailedView.jpeg'}
           alt={project.nombre}
-          onError={(e) => { try { e.currentTarget.src = '/images/ProjectsDirectoryDetailedView.jpeg'; } catch {} }}
+          onError={(e) => { try { e.currentTarget.src = '/images/ProjectsDirectoryDetailedView.jpeg'; } catch { } }}
           style={{
             position: 'absolute',
             inset: 0,
@@ -937,6 +975,19 @@ export function ProyectoDetallePage() {
           </div>
         </aside>
       </div>
+
+      {/* ← NUEVO: Toast de éxito flotante en la página de detalle */}
+      {successToast && (
+        <div style={{
+          position: 'fixed', bottom: '1.5rem', right: '1.5rem',
+          background: '#276749', color: '#fff',
+          padding: '0.75rem 1.25rem', borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          fontSize: '0.9rem', zIndex: 9999,
+        }}>
+          {successToast}
+        </div>
+      )}
     </div>
   );
 }

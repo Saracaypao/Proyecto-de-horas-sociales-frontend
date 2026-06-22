@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import Header from './components/Header';
 import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage'; 
 import MapaVistaPage from './pages/MapaVistaPage';
 import { InstitucionesPage, InstitucionDetallePage } from './pages/InstitucionesPage';
 import { ProyectosPage, ProyectoDetallePage } from './pages/ProyectosPage';
@@ -36,6 +37,7 @@ export default function App() {
       <Route path="/" element={<Navigate to="/login/estudiante" replace />} />
       <Route path="/login/docente" element={<LoginPage tipo="docente" />} />
       <Route path="/login/estudiante" element={<LoginPage tipo="estudiante" />} />
+         <Route path="/register" element={<RegisterPage />} /> {/*  */}
       <Route path="/*" element={<Shell activePage={activePage} />} />
     </Routes>
   );

@@ -273,3 +273,24 @@
 
   body               { background: white !important; }
 }
+
+/* Mensaje de éxito en modales */
+.modal-success {
+  color: #276749;
+  background: #f0fff4;
+  border: 1px solid #9ae6b4;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+}
+
+.modal-error {
+  color: #c53030;
+  background: #fff5f5;
+  border: 1px solid #feb2b2;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+}

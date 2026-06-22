@@ -1,8 +1,8 @@
-import { Building2, Eye, EyeOff, GraduationCap, Layers3, Lock, Mail, X } from 'lucide-react';
+import { Eye, EyeOff, GraduationCap, Lock, Mail, User, UserCheck } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Field } from '../components/ui';
-import { loginUser } from '../services/api';
+import { registerUser } from '../services/api';
 
 function Toast({ message, type, onClose }: { message: string; type: 'success' | 'error'; onClose: () => void }) {
   return (
@@ -29,42 +29,36 @@ function Toast({ message, type, onClose }: { message: string; type: 'success' | 
   );
 }
 
-export default function LoginPage({ tipo }: { tipo: 'docente' | 'estudiante' }) {
+export default function RegisterPage() {
   const navigate = useNavigate();
+  const [nombre, setNombre] = useState('');
+  const [apellido, setApellido] = useState('');
   const [correo, setCorreo] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
-  const isDocente = tipo === 'docente';
-  const title = isDocente ? 'Faculty & Staff Portal' : 'Bienvenido';
-  const subtitle = isDocente
-    ? 'Secure access for university employees.'
-    : 'Por favor ingresa tus credenciales para continuar.';
-  const icon = isDocente ? <Building2 size={40} /> : <GraduationCap size={40} />;
-
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!nombre.trim() || !apellido.trim() || !correo.trim() || !password.trim()) {
+      setToast({ message: 'Todos los campos son obligatorios', type: 'error' });
+      return;
+    }
+    if (password.length < 6) {
+      setToast({ message: 'La contraseña debe tener al menos 6 caracteres', type: 'error' });
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const user = await loginUser({ correo, password });
+      const user = await registerUser({ nombre, apellido, correo, password });
       localStorage.setItem('auth_user', JSON.stringify(user));
-      setToast({ message: `Bienvenido, ${user.nombre}`, type: 'success' });
-      setTimeout(() => navigate('/mapa'), 1000);
+      setToast({ message: `¡Bienvenido, ${user.nombre}!`, type: 'success' });
+      setTimeout(() => navigate('/mapa'), 1500);
     } catch (err) {
-      let msg = 'Correo o contraseña incorrectos';
-      
-      if (err instanceof Error) {
-        try {
-          const errorData = JSON.parse(err.message);
-          msg = errorData.error || errorData.message || 'Correo o contraseña incorrectos';
-        } catch {
-          msg = err.message || 'Correo o contraseña incorrectos';
-        }
-      }
-      
-      setToast({ message: msg, type: 'error' });
+      setToast({ message: err instanceof Error ? err.message : 'No se pudo crear la cuenta', type: 'error' });
     } finally {
       setIsLoading(false);
     }
@@ -85,22 +79,17 @@ export default function LoginPage({ tipo }: { tipo: 'docente' | 'estudiante' }) 
         <div className="login-shell">
           <div className="login-card card-type-employee">
             <div className="login-strip" />
-            <div className="login-icon">{icon}</div>
-            <h1>{title}</h1>
-            <p>{subtitle}</p>
+            <div className="login-icon"><GraduationCap size={40} /></div>
+            <h1>Crear cuenta</h1>
+            <p>Completa el formulario para registrarte en el sistema.</p>
 
-            <form className="login-form" onSubmit={handleLogin}>
-              <Field
-                label={isDocente ? 'Institutional Email' : 'Correo electrónico'}
-                placeholder={isDocente ? 'e.g. jdoe@uni.edu.sv' : 'correo@ejemplo.com'}
-                icon={<Mail size={18} />}
-                type="email"
-                value={correo}
-                onChange={(e) => setCorreo(e.target.value)}
-              />
+            <form className="login-form" onSubmit={handleSubmit}>
+              <Field label="Nombre" placeholder="Ej. Juan" icon={<User size={18} />} value={nombre} onChange={(e) => setNombre(e.target.value)} />
+              <Field label="Apellido" placeholder="Ej. Pérez" icon={<UserCheck size={18} />} value={apellido} onChange={(e) => setApellido(e.target.value)} />
+              <Field label="Correo electrónico" placeholder="correo@ejemplo.com" icon={<Mail size={18} />} type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} />
               <Field
                 label="Contraseña"
-                placeholder="••••••••"
+                placeholder="Mínimo 6 caracteres"
                 icon={<Lock size={18} />}
                 suffix={
                   <button
@@ -118,15 +107,14 @@ export default function LoginPage({ tipo }: { tipo: 'docente' | 'estudiante' }) 
               />
 
               <button className="primary-btn large" type="submit" disabled={isLoading}>
-                {isDocente && <Layers3 size={18} />}
-                {isLoading ? 'Ingresando...' : 'Iniciar sesión'}
+                {isLoading ? 'Creando cuenta...' : 'Registrarse'}
               </button>
             </form>
 
             <p style={{ marginTop: '1rem', fontSize: '0.875rem', textAlign: 'center' }}>
-              ¿No tienes cuenta?{' '}
-              <Link to="/register" style={{ color: 'var(--color-primary, #3182ce)' }}>
-                Regístrate aquí
+              ¿Ya tienes cuenta?{' '}
+              <Link to="/login/estudiante" style={{ color: 'var(--color-primary, #3182ce)' }}>
+                Inicia sesión
               </Link>
             </p>
           </div>

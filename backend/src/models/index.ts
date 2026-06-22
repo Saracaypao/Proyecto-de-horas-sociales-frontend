@@ -4,6 +4,7 @@ import Project from './project.model.js';
 import Student from './student.model.js';
 import ProjectEnrollment from './enrollment.model.js';
 import MapMarker from './marker.model.js';
+import User from './user.model.js'; 
 
 const models = {
   Institution,
@@ -11,11 +12,12 @@ const models = {
   Student,
   ProjectEnrollment,
   MapMarker,
+  User, 
 };
 
 Object.values(models).forEach((model) => {
-  if (typeof model.associate === 'function') {
-    model.associate(models as any);
+  if (typeof (model as any).associate === 'function') {
+    (model as any).associate(models as any);
   }
 });
 
