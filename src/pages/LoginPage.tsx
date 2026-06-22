@@ -1,4 +1,4 @@
-import { Building2, Eye, EyeOff, GraduationCap, Layers3, Lock, Mail, X } from 'lucide-react';
+import { Building2, Eye, EyeOff, GraduationCap, Layers3, Lock, Mail} from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Field } from '../components/ui';
