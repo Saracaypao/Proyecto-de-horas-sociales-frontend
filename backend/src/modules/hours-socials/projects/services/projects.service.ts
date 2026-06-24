@@ -236,9 +236,12 @@ function toProjectDTO(project: any) {
   const capacity = formatCapacity(personas, cupos);
   return {
     id: plain.id,
-    institutionId: plain.institution_id,
-    institutionName: plain.institution?.nombre ?? '',
-    institutionSigla: plain.institution?.sigla ?? '',
+    institutionId: plain.institution_id, // se cambio
+    institutionName: plain.institution?.nombre ?? '', // se cambio
+    institutionSigla: plain.institution?.sigla ?? '', // se cambio
+    institutionTipo: plain.institution?.tipo ?? '', // se cambio
+    institutionDescripcion: plain.institution?.descripcion ?? '', // se cambio
+    institutionImageUrl: plain.institution?.image_url ?? null, // se cambio
     titulo: plain.titulo,
     ubicacion: plain.ubicacion,
     estado: plain.estado,
@@ -413,7 +416,7 @@ class ProjectsService {
   public getProjectById = async (id: string | number) => {
     const project = await Project.findByPk(id, {
       include: [
-        { model: Institution, as: 'institution', attributes: ['id', 'nombre', 'sigla'], required: true },
+        { model: Institution, as: 'institution', attributes: ['id', 'nombre', 'sigla', 'tipo', 'descripcion', 'image_url'], required: true }, //se cambió
         { model: MapMarker, as: 'markers', required: false, attributes: ['id', 'hombres', 'mujeres'] },
       ],
     });
@@ -427,7 +430,7 @@ class ProjectsService {
   public getProjectDetail = async (id: string) => {
     const project = await Project.findByPk(id, {
       include: [
-        { model: Institution, as: 'institution', attributes: ['id', 'nombre', 'sigla'], required: true },
+        { model: Institution, as: 'institution', attributes: ['id', 'nombre', 'sigla', 'tipo', 'descripcion', 'image_url'], required: true }, //se cambió	
         { model: MapMarker, as: 'markers', required: false, attributes: ['id', 'hombres', 'mujeres'] },
       ],
     });

@@ -146,6 +146,9 @@ export type ProjectDetailResponse = {
   status: string;
   estado: string;
   institution: string;
+  institutionTipo?: string | null;
+  institutionDescripcion?: string | null;
+  institutionImageUrl?: string | null;
   facultad?: string;
   ubicacion: string;
   descripcion: string;

@@ -43,7 +43,7 @@ export default function EditProjectModal({
 
   const [projectPreviewUrl, setProjectPreviewUrl] = useState<string | null>(project.imagen);
   const [projectImageDataUrl, setProjectImageDataUrl] = useState<string | null>(null);
-  const [institutionPreviewUrl, setInstitutionPreviewUrl] = useState<string | null>(null);
+  const [institutionPreviewUrl, setInstitutionPreviewUrl] = useState<string | null>((project as any).institutionImageUrl ?? null);
   const [institutionImageDataUrl, setInstitutionImageDataUrl] = useState<string | null>(null);
 
   const [isSaving, setIsSaving] = useState(false);
@@ -52,9 +52,9 @@ export default function EditProjectModal({
 
   // Campos pre-rellenos con datos actuales del proyecto
   const [institutionName, setInstitutionName] = useState(project.institution ?? '');
-  const [institutionType, setInstitutionType] = useState('');
+  const [institutionType, setInstitutionType] = useState((project as any).institutionTipo ?? '');
   const [institutionLocation, setInstitutionLocation] = useState(project.ubicacion ?? '');
-  const [institutionDescription, setInstitutionDescription] = useState('');
+  const [institutionDescription, setInstitutionDescription] = useState((project as any).institutionDescripcion ?? '');
   const [faculty, setFaculty] = useState(project.facultad ?? '');
   const [careers, setCareers] = useState((project.carreras ?? []).join(', '));
   const [title, setTitle] = useState(project.titulo ?? project.nombre ?? '');
