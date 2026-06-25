@@ -97,6 +97,27 @@ class ProjectsController {
     next(error);
   }
 };
+
+public updateEnrollment = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const projectId = String(req.params.id);
+      const enrollmentId = String(req.params.enrollmentId);
+      const result = await projectsService.updateEnrollment(projectId, enrollmentId, req.body ?? {});
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public deleteProject = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const projectId = String(req.params.id);
+      const result = await projectsService.deleteProject(projectId);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
 }
 
 const projectsController = new ProjectsController();
@@ -110,3 +131,5 @@ export const listProjectEnrollmentsController = projectsController.listProjectEn
 export const updateProjectController = projectsController.updateProject;
 export default ProjectsController;
 export const removeEnrollmentController = projectsController.removeEnrollment;
+export const updateEnrollmentController = projectsController.updateEnrollment;
+export const deleteProjectController = projectsController.deleteProject;

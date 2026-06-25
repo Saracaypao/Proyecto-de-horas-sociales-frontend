@@ -54,6 +54,7 @@ export default function EditProjectModal({
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const [studentToEdit, setStudentToEdit] = useState<EnrolledStudent | null>(null);
+  const [studentToDelete, setStudentToDelete] = useState<EnrolledStudent | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [students, setStudents] = useState<EnrolledStudent[]>(
     (project.estudiantes ?? []) as EnrolledStudent[]
@@ -114,6 +115,7 @@ export default function EditProjectModal({
 
     try {
       await updateProject(project.id, {
+        institutionId: (project as any).institutionId ?? undefined,
         institutionName,
         institutionType,
         institutionLocation,
@@ -144,21 +146,22 @@ export default function EditProjectModal({
   }
 
   async function handleRemoveStudent(enrollmentId: string) {
-    if (!confirm('¿Eliminar la inscripción de este estudiante del proyecto?')) return;
     setRemovingId(enrollmentId);
     try {
       await removeEnrollment(String(project.id), enrollmentId);
       setStudents((prev) => prev.filter((s) => s.id !== enrollmentId));
+      showToast('Estudiante eliminado correctamente', 'success');
       onSaved?.();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'No se pudo eliminar');
+      showToast(err instanceof Error ? err.message : 'No se pudo eliminar', 'error');
     } finally {
       setRemovingId(null);
+      setStudentToDelete(null);
     }
   }
 
   function handleStudentSaved() {
-    // Refrescar lista desde el proyecto padre después de editar
+    showToast('Estudiante actualizado correctamente', 'success');
     onSaved?.();
   }
 
@@ -279,7 +282,7 @@ export default function EditProjectModal({
                           <button
                             type="button"
                             title="Eliminar inscripción"
-                            onClick={() => void handleRemoveStudent(student.id)}
+                            onClick={() => setStudentToDelete(student)}
                             disabled={removingId === student.id}
                             style={{ padding: '6px 8px', borderRadius: '8px', border: '1px solid #fed7d7', background: 'white', cursor: 'pointer', color: '#e53e3e', display: 'flex', alignItems: 'center' }}
                           >
@@ -300,8 +303,59 @@ export default function EditProjectModal({
                 projectId={String(project.id)}
                 onClose={() => setStudentToEdit(null)}
                 onSaved={handleStudentSaved}
-                updateFn={updateStudentEnrollment}
+                updateFn={(projectId, enrollmentId, body) => updateStudentEnrollment(projectId, enrollmentId, body)}
               />
+            )}
+
+            {/* Modal de confirmación para eliminar estudiante */}
+            {studentToDelete && (
+              <div style={{
+                position: 'fixed', inset: 0, zIndex: 99999,
+                background: 'rgba(0,0,0,0.5)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <div style={{
+                  background: 'white', borderRadius: 16, padding: '28px 32px',
+                  maxWidth: 440, width: '90%',
+                  boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+                }}>
+                  <h2 style={{ margin: '0 0 10px', fontSize: '1.2rem', fontWeight: 800, color: '#1c2433' }}>
+                    ¿Eliminar este estudiante?
+                  </h2>
+                  <p style={{ margin: '0 0 24px', fontSize: '0.9rem', color: '#687182', lineHeight: 1.6 }}>
+                    Esta acción no se puede deshacer. Se eliminará la inscripción de <strong>"{studentToDelete.nombre}"</strong> del proyecto.
+                  </p>
+                  <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                    <button
+                      type="button"
+                      onClick={() => setStudentToDelete(null)}
+                      style={{
+                        padding: '10px 20px', borderRadius: 10, border: '1px solid #d1d5db',
+                        background: 'white', fontSize: '0.9rem', fontWeight: 600,
+                        color: '#374151', cursor: 'pointer',
+                      }}
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleRemoveStudent(studentToDelete.id)}
+                      disabled={removingId === studentToDelete.id}
+                      style={{
+                        padding: '10px 20px', borderRadius: 10, border: 'none',
+                        background: removingId === studentToDelete.id
+                          ? '#f87171'
+                          : 'linear-gradient(135deg, #ef4444, #dc2626)',
+                        color: 'white', fontSize: '0.9rem', fontWeight: 700,
+                        cursor: removingId === studentToDelete.id ? 'not-allowed' : 'pointer',
+                        opacity: removingId === studentToDelete.id ? 0.7 : 1,
+                      }}
+                    >
+                      {removingId === studentToDelete.id ? 'Eliminando...' : 'Sí, eliminar estudiante'}
+                    </button>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
 

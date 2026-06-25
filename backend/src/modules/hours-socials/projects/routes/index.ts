@@ -206,22 +206,22 @@ router.get('/', controller.listProjects);
  */
 router.get('/map', controller.listProjectsForMap);
 router.post(
-	'/',
-	validateRequiredFields([
-		'institutionName',
-		'institutionType',
-		'institutionLocation',
-		'institutionDescription',
-		'institutionImage',
-		'facultad',
-		'carreras',
-		'titulo',
-		'ubicacion',
-		'descripcion',
-		// fechaInicio, fechaCierre y cupos son opcionales
-	]),
-	controller.createProject
+  '/',
+  validateRequiredFields([
+    'institutionName',
+    'institutionType',
+    'institutionLocation',
+    'institutionDescription',
+    'institutionImage',
+    'facultad',
+    'carreras',
+    'titulo',
+    'ubicacion',
+    'descripcion',
+  ]),
+  controller.createProject
 );
+
 /**
  * @swagger
  * /api/projects/{id}:
@@ -246,7 +246,6 @@ router.post(
  *                   type: integer
  *                 nombre:
  *                   type: string
- *                   description: Nombre del proyecto
  *                 imagen:
  *                   type: string
  *                   nullable: true
@@ -255,7 +254,6 @@ router.post(
  *                   example: En progreso
  *                 institution:
  *                   type: string
- *                   description: Nombre de la institución
  *                 ubicacion:
  *                   type: string
  *                 fechaInicio:
@@ -270,12 +268,10 @@ router.post(
  *                   type: string
  *                 equipo:
  *                   type: array
- *                   description: Nombres de estudiantes asignados al proyecto
  *                   items:
  *                     type: string
  *                 estudiantesAsignados:
  *                   type: integer
- *                   description: Cantidad total de estudiantes asignados al proyecto
  *                 estudiantes:
  *                   type: array
  *                   items:
@@ -313,18 +309,10 @@ router.post(
  *                   type: string
  *                 hombres:
  *                   type: integer
- *                   description: Total de hombres del proyecto, calculado desde la vista del mapa
  *                 mujeres:
  *                   type: integer
- *                   description: Total de mujeres del proyecto, calculado desde la vista del mapa
  *       404:
  *         description: Proyecto no encontrado
- */
-router.get('/:id', controller.getProjectById);
-
-/**
- * @swagger
- * /api/projects/{id}:
  *   put:
  *     summary: Actualiza un proyecto existente
  *     tags: [Projects]
@@ -386,8 +374,34 @@ router.get('/:id', controller.getProjectById);
  *         description: Proyecto actualizado
  *       404:
  *         description: Proyecto no encontrado
+ *   delete:
+ *     summary: Elimina un proyecto y todas sus inscripciones
+ *     tags: [Projects]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Proyecto eliminado correctamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 deleted:
+ *                   type: boolean
+ *                   example: true
+ *                 projectId:
+ *                   type: integer
+ *       404:
+ *         description: Proyecto no encontrado
  */
+router.get('/:id', controller.getProjectById);
 router.put('/:id', controller.updateProject);
+router.delete('/:id', controller.deleteProject);
 
 /**
  * @swagger
@@ -404,12 +418,6 @@ router.put('/:id', controller.updateProject);
  *     responses:
  *       200:
  *         description: Inscripciones del proyecto
- */
-router.get('/:id/enrollments', controller.listProjectEnrollments);
-
-/**
- * @swagger
- * /api/projects/{id}/enrollments:
  *   post:
  *     summary: Inscribe un estudiante en un proyecto
  *     tags: [Projects]
@@ -442,11 +450,72 @@ router.get('/:id/enrollments', controller.listProjectEnrollments);
  *       201:
  *         description: Inscripción creada. Devuelve el proyecto actualizado y el nuevo estudiante inscrito.
  */
+router.get('/:id/enrollments', controller.listProjectEnrollments);
 router.post('/:id/enrollments', validateRequiredFields(['nombre', 'carnet', 'carrera']), controller.enrollStudentInProject);
 
 /**
  * @swagger
  * /api/projects/{id}/enrollments/{enrollmentId}:
+ *   put:
+ *     summary: Actualiza los datos de un estudiante inscrito en un proyecto
+ *     tags: [Projects]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID del proyecto
+ *       - in: path
+ *         name: enrollmentId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID de la inscripción
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               nombre:
+ *                 type: string
+ *               carnet:
+ *                 type: string
+ *               carrera:
+ *                 type: string
+ *               genero:
+ *                 type: string
+ *                 enum: [Masculino, Femenino]
+ *               email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Estudiante actualizado correctamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                 student_id:
+ *                   type: string
+ *                 nombre:
+ *                   type: string
+ *                 carnet:
+ *                   type: string
+ *                 carrera:
+ *                   type: string
+ *                 genero:
+ *                   type: string
+ *                   nullable: true
+ *                 email:
+ *                   type: string
+ *                   nullable: true
+ *       404:
+ *         description: Inscripción o estudiante no encontrado
  *   delete:
  *     summary: Elimina la inscripción de un estudiante del proyecto
  *     tags: [Projects]
@@ -467,6 +536,7 @@ router.post('/:id/enrollments', validateRequiredFields(['nombre', 'carnet', 'car
  *       404:
  *         description: Inscripción no encontrada
  */
+router.put('/:id/enrollments/:enrollmentId', controller.updateEnrollment);
 router.delete('/:id/enrollments/:enrollmentId', controller.removeEnrollment);
 
 export default router;

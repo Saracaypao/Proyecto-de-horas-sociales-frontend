@@ -186,6 +186,39 @@ class InstitutionsService {
     return institution ? toInstitutionDetailDTO(institution) : null;
   };
 
+  public update = async (id: string, body: {
+    nombre?: string;
+    ubicacion?: string;
+    descripcion?: string;
+    tipo?: string | null;
+    image_url?: string | null;
+  }) => {
+    const institution = await Institution.findByPk(id);
+    if (!institution) return null;
+
+    const updatePayload: Partial<{
+      nombre: string; sigla: string; ubicacion: string;
+      descripcion: string; tipo: string | null; image_url: string | null;
+    }> = {};
+
+    if (typeof body.nombre      === 'string' && body.nombre.trim()) {
+      updatePayload.nombre = body.nombre.trim();
+      updatePayload.sigla  = body.nombre.trim()
+        .split(/\s+/).map((w) => w[0]).filter(Boolean).join('').toUpperCase().slice(0, 8) || 'INST';
+    }
+    if (typeof body.ubicacion   === 'string') updatePayload.ubicacion   = body.ubicacion.trim();
+    if (typeof body.descripcion === 'string') updatePayload.descripcion = body.descripcion.trim();
+    if ('tipo'      in body) updatePayload.tipo      = body.tipo      ?? null;
+    if ('image_url' in body) updatePayload.image_url = body.image_url ?? null;
+
+    await institution.update(updatePayload);
+    return this.getById(id);
+  };
+
+  public listInstitutions = async () => {
+    return this.list();
+  };
+
   public getInstitutionProjects = async (id: string, status?: ProjectStatus) => {
     const institution = await this.getById(id);
     if (!institution) return null;

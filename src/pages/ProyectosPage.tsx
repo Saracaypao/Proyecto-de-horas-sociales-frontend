@@ -11,7 +11,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import InscribirEstudianteModal from '../components/InscribirEstudianteModal';
 import CreateProjectModal from '../components/CreateProjectModal';
 import EditProjectModal from '../components/EditProjectModal/index';
@@ -23,6 +23,7 @@ import {
   getProjectById,
   getProjects,
   updateProject,
+  deleteProject,  
   type ProjectDetailResponse,
   type ProjectListResponse,
 } from '../services/api';
@@ -376,18 +377,34 @@ function StatCard({ icon, label, value, accent = false }: { icon: React.ReactNod
 
 export function ProyectoDetallePage() {
   const { id = '' } = useParams();
+  const navigate = useNavigate();
   const [project, setProject] = useState<ProjectDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showEdit, setShowEdit] = useState(false);
   const [statusDraft, setStatusDraft] = useState<VisibleProjectStatus>('En progreso');
   const [savingStatus, setSavingStatus] = useState(false);
-  const [successToast, setSuccessToast] = useState<string | null>(null); // ← NUEVO
+  const [successToast, setSuccessToast] = useState<string | null>(null);
+  const [deletingProject, setDeletingProject] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  // ← NUEVO
   function showToast(msg: string) {
     setSuccessToast(msg);
     setTimeout(() => setSuccessToast(null), 3000);
+  }
+
+  async function handleDeleteProject() {
+    if (!project) return;
+    setDeletingProject(true);
+    try {
+      await deleteProject(project.id);
+      showToast('✓ Proyecto eliminado correctamente');
+      setTimeout(() => navigate('/proyectos'), 1500);
+    } catch (err) {
+      showToast(`Error: ${err instanceof Error ? err.message : 'No se pudo eliminar el proyecto'}`);
+      setDeletingProject(false);
+    }
+    setShowDeleteConfirm(false);
   }
 
   function loadProject(active: { value: boolean }) {
@@ -498,26 +515,95 @@ export function ProyectoDetallePage() {
           <ArrowLeft size={16} />
           Volver a proyectos
         </Link>
-        <button
-          type="button"
-          onClick={() => setShowEdit(true)}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '8px 18px',
-            borderRadius: 10,
-            fontSize: '0.88rem',
-            fontWeight: 700,
-            color: 'white',
-            background: 'linear-gradient(135deg, #2f68ec, #1d55cc)',
-            border: 'none',
-            cursor: 'pointer',
-          }}
-        >
-          ✏️ Editar proyecto
-        </button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button
+            type="button"
+            onClick={() => setShowEdit(true)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '8px 18px',
+              borderRadius: 10,
+              fontSize: '0.88rem',
+              fontWeight: 700,
+              color: 'white',
+              background: 'linear-gradient(135deg, #2f68ec, #1d55cc)',
+              border: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            ✏️ Editar proyecto
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowDeleteConfirm(true)}
+            disabled={deletingProject}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '8px 18px',
+              borderRadius: 10,
+              fontSize: '0.88rem',
+              fontWeight: 700,
+              color: 'white',
+              background: deletingProject ? '#f87171' : 'linear-gradient(135deg, #ef4444, #dc2626)',
+              border: 'none',
+              cursor: deletingProject ? 'not-allowed' : 'pointer',
+              opacity: deletingProject ? 0.7 : 1,
+            }}
+          >
+            🗑️ {deletingProject ? 'Eliminando...' : 'Eliminar proyecto'}
+          </button>
+        </div>
       </div>
+
+      {/* Modal de confirmación de eliminación */}
+      {showDeleteConfirm && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9998,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <div style={{
+            background: 'white', borderRadius: 16, padding: '28px 32px',
+            maxWidth: 440, width: '90%',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+          }}>
+            <h2 style={{ margin: '0 0 10px', fontSize: '1.2rem', fontWeight: 800, color: '#1c2433' }}>
+              ¿Eliminar este proyecto?
+            </h2>
+            <p style={{ margin: '0 0 24px', fontSize: '0.9rem', color: '#687182', lineHeight: 1.6 }}>
+              Esta acción no se puede deshacer. Se eliminarán el proyecto <strong>"{project?.nombre}"</strong> y todas sus inscripciones.
+            </p>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(false)}
+                style={{
+                  padding: '10px 20px', borderRadius: 10, border: '1px solid #d1d5db',
+                  background: 'white', fontSize: '0.9rem', fontWeight: 600,
+                  color: '#374151', cursor: 'pointer',
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleDeleteProject()}
+                style={{
+                  padding: '10px 20px', borderRadius: 10, border: 'none',
+                  background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                  color: 'white', fontSize: '0.9rem', fontWeight: 700, cursor: 'pointer',
+                }}
+              >
+                Sí, eliminar proyecto
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ← ACTUALIZADO: onSaved recarga datos y muestra toast */}
       {showEdit ? (

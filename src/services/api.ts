@@ -191,6 +191,7 @@ export function createProject(payload: CreateProjectPayload) {
 }
 
 export type UpdateProjectPayload = {
+  institutionId?: string | number;
   institutionName?: string;
   institutionType?: string;
   institutionLocation?: string;
@@ -404,6 +405,7 @@ export async function removeEnrollment(projectId: string, enrollmentId: string):
 
 export function updateStudentEnrollment(
   projectId: string,
+  enrollmentId: string,
   body: {
     nombre: string;
     carnet: string;
@@ -412,12 +414,37 @@ export function updateStudentEnrollment(
     email?: string;
   }
 ): Promise<unknown> {
-  return request(`/projects/${projectId}/enrollments`, {
-    method: 'POST',
+  return request(`/projects/${projectId}/enrollments/${enrollmentId}`, {
+    method: 'PUT',
     body: JSON.stringify({
       ...body,
       genero: body.genero || null,
       email: body.email || null,
     }),
   });
+}
+
+export type UpdateInstitutionPayload = {
+  nombre?: string;
+  ubicacion?: string;
+  descripcion?: string;
+  tipo?: string | null;
+  image_url?: string | null;
+};
+
+export function updateInstitution(institutionId: string | number, payload: UpdateInstitutionPayload) {
+  return request<InstitutionDetailResponse>(`/institutions/${institutionId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteProject(projectId: string | number): Promise<void> {
+  const res = await fetch(`${API_BASE}/projects/${projectId}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error((body as any)?.message ?? 'No se pudo eliminar el proyecto');
+  }
 }

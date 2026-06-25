@@ -69,6 +69,45 @@ router.get('/', controller.listInstitutions);
 /**
  * @swagger
  * /api/institutions/{id}:
+ *   put:
+ *     summary: Actualiza una institución existente
+ *     tags: [Institutions]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               nombre:
+ *                 type: string
+ *               ubicacion:
+ *                 type: string
+ *               descripcion:
+ *                 type: string
+ *               tipo:
+ *                 type: string
+ *                 nullable: true
+ *               image_url:
+ *                 type: string
+ *                 nullable: true
+ *     responses:
+ *       200:
+ *         description: Institución actualizada
+ *       404:
+ *         description: Institución no encontrada
+ */
+router.put('/:id', controller.updateInstitution);
+
+/**
+ * @swagger
+ * /api/institutions/{id}:
  *   get:
  *     summary: Obtiene una institución por ID
  *     tags: [Institutions]

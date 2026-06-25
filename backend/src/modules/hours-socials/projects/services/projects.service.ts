@@ -1,6 +1,6 @@
 import { col, fn, QueryTypes, Transaction, where } from 'sequelize';
 import sequelize from '../../../../core/config/database.js';
-import Institution from '../../../../models/institution.model.js';
+import Institution, { type InstitutionAttributes } from '../../../../models/institution.model.js';
 import Project from '../../../../models/project.model.js';
 import ProjectEnrollment from '../../../../models/enrollment.model.js';
 import Student from '../../../../models/student.model.js';
@@ -44,20 +44,34 @@ function deriveSigla(nombre: string) {
 
 async function resolveInstitution(body: Record<string, unknown>, transaction: Transaction) {
   const institutionIdValue = Number(body.institutionId);
+  const institutionName     = normalizeText(body.institutionName ?? body.institution);
+  const institutionLocation = normalizeText(body.institutionLocation ?? body.ubicacion);
+  const institutionDescription = normalizeText(body.institutionDescription ?? body.descripcion);
+  const institutionImage    = normalizeText(body.institutionImage ?? body.institutionImageUrl);
+  const institutionType     = normalizeText(body.institutionType ?? body.tipo);
+
+  // ── Caso 1: se envía institutionId → actualizar ESA institución (nunca crear otra)
   if (Number.isInteger(institutionIdValue) && institutionIdValue > 0) {
     const institution = await Institution.findByPk(institutionIdValue, { transaction });
-    if (institution) return institution;
+    if (institution) {
+      const updatePayload: Partial<InstitutionAttributes> = {};
+      if (institutionName)        updatePayload.nombre      = institutionName;
+      if (institutionName)        updatePayload.sigla       = deriveSigla(institutionName);
+      if (institutionLocation)    updatePayload.ubicacion   = institutionLocation;
+      if (institutionDescription) updatePayload.descripcion = institutionDescription;
+      if (institutionImage)       updatePayload.image_url   = institutionImage;
+      if (institutionType)        updatePayload.tipo        = institutionType;
+      if (Object.keys(updatePayload).length > 0) {
+        await institution.update(updatePayload, { transaction });
+      }
+      return institution;
+    }
   }
 
-  const institutionName = normalizeText(body.institutionName ?? body.institution);
+  // ── Caso 2: sin institutionId → buscar por nombre exacto (ignoring case) o crear
   if (!institutionName) {
     throw new HttpError(400, 'Missing required fields: institutionName');
   }
-
-  const institutionLocation = normalizeText(body.institutionLocation ?? body.ubicacion);
-  const institutionDescription = normalizeText(body.institutionDescription ?? body.descripcion);
-  const institutionImage = normalizeText(body.institutionImage ?? body.institutionImageUrl);
-  const institutionType = normalizeText(body.institutionType ?? body.tipo);
 
   const existingInstitution = await Institution.findOne({
     where: where(fn('LOWER', col('nombre')), institutionName.toLowerCase()),
@@ -67,25 +81,23 @@ async function resolveInstitution(body: Record<string, unknown>, transaction: Tr
   if (existingInstitution) {
     await existingInstitution.update(
       {
-        ubicacion: institutionLocation || existingInstitution.ubicacion,
+        ubicacion:   institutionLocation   || existingInstitution.ubicacion,
         descripcion: institutionDescription || existingInstitution.descripcion,
-        image_url: institutionImage || existingInstitution.image_url,
-        tipo: institutionType || existingInstitution.tipo,
+        image_url:   institutionImage      || existingInstitution.image_url,
+        tipo:        institutionType       || existingInstitution.tipo,
       },
       { transaction }
     );
-
     return existingInstitution;
   }
 
   const createdInstitution = await Institution.create({
-    nombre: institutionName,
-    sigla: deriveSigla(institutionName),
-    ubicacion: institutionLocation || 'Sin ubicación registrada',
-    descripcion:
-      institutionDescription || `Institución registrada para el proyecto ${normalizeText(body.titulo) || institutionName}`,
-    tipo: institutionType || null,
-    image_url: institutionImage || null,
+    nombre:      institutionName,
+    sigla:       deriveSigla(institutionName),
+    ubicacion:   institutionLocation    || 'Sin ubicación registrada',
+    descripcion: institutionDescription || `Institución registrada para el proyecto ${normalizeText(body.titulo) || institutionName}`,
+    tipo:        institutionType  || null,
+    image_url:   institutionImage || null,
   }, { transaction });
 
   return createdInstitution;
@@ -694,9 +706,14 @@ class ProjectsService {
     try {
       const statusCandidate = mapVisibleStatusToProjectStatus(body.estado ?? body.status);
 
-      // allow updating institution if provided
+      // allow updating institution if provided — always pass the project's current institution_id
+      // so resolveInstitution updates that institution instead of creating a new one
       if (body.institutionName) {
-        await resolveInstitution(body, transaction);
+        const bodyWithId = {
+          ...body,
+          institutionId: body.institutionId ?? projectModel.institution_id,
+        };
+        await resolveInstitution(bodyWithId, transaction);
       }
 
       await projectModel.update(
@@ -803,6 +820,69 @@ class ProjectsService {
     throw err;
   }
 };
+
+public updateEnrollment = async (
+    projectId: string | number,
+    enrollmentId: string,
+    body: Record<string, unknown>
+  ) => {
+    const enrollment = await ProjectEnrollment.findOne({
+      where: { id: enrollmentId, project_id: projectId },
+    });
+    if (!enrollment) throw new HttpError(404, 'Enrollment not found');
+
+    const studentId = enrollment.get('student_id') as string | number;
+    const student = await Student.findByPk(studentId);
+    if (!student) throw new HttpError(404, 'Student not found');
+
+    await student.update({
+      nombre: typeof body.nombre === 'string' ? body.nombre : student.get('nombre'),
+      carnet:  typeof body.carnet  === 'string' ? body.carnet  : student.get('carnet'),
+      carrera: typeof body.carrera === 'string' ? body.carrera : student.get('carrera'),
+      genero:  (body.genero === 'Masculino' || body.genero === 'Femenino') ? body.genero : null,
+      email:   typeof body.email   === 'string' && body.email ? body.email : null,
+    });
+
+    const activeEnrollments = await ProjectEnrollment.findAll({
+      where: { project_id: projectId, activo: true },
+      include: [{ model: Student, as: 'student', required: true }],
+    });
+    const activeNames = activeEnrollments
+      .map((e) => (e.get('student') as any)?.nombre)
+      .filter(Boolean)
+      .map(String);
+
+    await Project.update(
+      { team_members: activeNames },
+      { where: { id: projectId } }
+    );
+
+    return {
+      id: enrollment.get('id'),
+      student_id: student.get('id'),
+      nombre:  student.get('nombre'),
+      carnet:  student.get('carnet'),
+      carrera: student.get('carrera'),
+      genero:  student.get('genero') ?? null,
+      email:   student.get('email')  ?? null,
+    };
+  };
+
+  public deleteProject = async (projectId: string | number) => {
+    const project = await Project.findByPk(projectId);
+    if (!project) throw new HttpError(404, 'Project not found');
+
+    const transaction = await sequelize.transaction();
+    try {
+      await ProjectEnrollment.destroy({ where: { project_id: projectId }, transaction });
+      await project.destroy({ transaction });
+      await transaction.commit();
+      return { deleted: true, projectId };
+    } catch (err) {
+      await transaction.rollback();
+      throw err;
+    }
+  };
 }
 
 export const projectsService = new ProjectsService();
