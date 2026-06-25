@@ -144,7 +144,22 @@ export default function MapaVistaPage() {
     }).addTo(map);
 
     mapRef.current = map;
-    markersLayerRef.current = L.layerGroup().addTo(map);
+    markersLayerRef.current = L.layerGroup();
+
+    const ZOOM_THRESHOLD = 10;
+
+    map.on('zoomend', () => {
+      const currentZoom = map.getZoom();
+      if (currentZoom >= ZOOM_THRESHOLD) {
+        if (!map.hasLayer(markersLayerRef.current)) {
+          markersLayerRef.current.addTo(map);
+        }
+      } else {
+        if (map.hasLayer(markersLayerRef.current)) {
+          map.removeLayer(markersLayerRef.current);
+        }
+      }
+    });
 
     return () => {
       try {
@@ -212,6 +227,7 @@ export default function MapaVistaPage() {
         map.fitBounds(bounds.pad(0.5));
       }
     }
+    map.fireEvent('zoomend');
   }, [markers, mostrarDetalle, proyectoSeleccionado]);
 
   return (
