@@ -86,6 +86,17 @@ class ProjectsController {
       next(error);
     }
   };
+
+  public removeEnrollment = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const projectId = String(req.params.id);
+    const enrollmentId = String(req.params.enrollmentId);
+    const result = await projectsService.removeEnrollment(projectId, enrollmentId);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+};
 }
 
 const projectsController = new ProjectsController();
@@ -98,3 +109,4 @@ export const enrollStudentInProjectController = projectsController.enrollStudent
 export const listProjectEnrollmentsController = projectsController.listProjectEnrollments;
 export const updateProjectController = projectsController.updateProject;
 export default ProjectsController;
+export const removeEnrollmentController = projectsController.removeEnrollment;

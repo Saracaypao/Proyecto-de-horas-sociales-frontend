@@ -391,3 +391,33 @@ export function loginUser(payload: LoginPayload) {
     body: JSON.stringify(payload),
   });
 }
+
+export async function removeEnrollment(projectId: string, enrollmentId: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/projects/${projectId}/enrollments/${enrollmentId}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error((body as any)?.message ?? 'No se pudo eliminar la inscripción');
+  }
+}
+
+export function updateStudentEnrollment(
+  projectId: string,
+  body: {
+    nombre: string;
+    carnet: string;
+    carrera: string;
+    genero?: 'Masculino' | 'Femenino' | '';
+    email?: string;
+  }
+): Promise<unknown> {
+  return request(`/projects/${projectId}/enrollments`, {
+    method: 'POST',
+    body: JSON.stringify({
+      ...body,
+      genero: body.genero || null,
+      email: body.email || null,
+    }),
+  });
+}

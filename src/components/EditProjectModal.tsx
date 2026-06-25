@@ -3,6 +3,9 @@ import { useRef, useState } from 'react';
 import { toDataUrl, parseCsvList, updateProject } from '../services/api';
 import { Field } from './ui';
 import type { ProjectDetailResponse } from '../services/api';
+import { Trash2, Pencil } from 'lucide-react';
+import EditStudentModal, { type EnrolledStudent } from './EditStudentModal';
+import { removeEnrollment, updateStudentEnrollment } from '../services/api';
 
 function Toast({ message, type, onClose }: { message: string; type: 'success' | 'error'; onClose: () => void }) {
   return (
@@ -49,6 +52,12 @@ export default function EditProjectModal({
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const [studentToEdit, setStudentToEdit] = useState<EnrolledStudent | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const [students, setStudents] = useState<EnrolledStudent[]>(
+    (project.estudiantes ?? []) as EnrolledStudent[]
+  );
 
   // Campos pre-rellenos con datos actuales del proyecto
   const [institutionName, setInstitutionName] = useState(project.institution ?? '');
@@ -134,6 +143,25 @@ export default function EditProjectModal({
     }
   }
 
+  async function handleRemoveStudent(enrollmentId: string) {
+    if (!confirm('¿Eliminar la inscripción de este estudiante del proyecto?')) return;
+    setRemovingId(enrollmentId);
+    try {
+      await removeEnrollment(String(project.id), enrollmentId);
+      setStudents((prev) => prev.filter((s) => s.id !== enrollmentId));
+      onSaved?.();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'No se pudo eliminar');
+    } finally {
+      setRemovingId(null);
+    }
+  }
+
+  function handleStudentSaved() {
+    // Refrescar lista desde el proyecto padre después de editar
+    onSaved?.();
+  }
+
   return (
     <>
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
@@ -216,6 +244,65 @@ export default function EditProjectModal({
             </div>
 
             {error ? <p className="modal-error">{error}</p> : null}
+            {/* ── Estudiantes inscritos ─────────────────────────── */}
+            <div style={{ marginTop: '24px' }}>
+              <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#9aa3b5', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px' }}>
+                Estudiantes inscritos ({students.length})
+              </p>
+
+              {students.length === 0 ? (
+                <p style={{ fontSize: '0.88rem', color: '#9aa3b5' }}>No hay estudiantes inscritos aún.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {students.map((student) => {
+                    const initials = (student.nombre ?? '')
+                      .split(' ').map((w) => w[0]).join('').substring(0, 2).toUpperCase();
+                    return (
+                      <div key={student.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '10px', background: '#f8faff', border: '1px solid #e8edf8' }}>
+                        <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg, #3972f0, #21c08a)', color: 'white', display: 'grid', placeItems: 'center', fontSize: '0.75rem', fontWeight: 800, flexShrink: 0 }}>
+                          {initials}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ margin: 0, fontSize: '0.88rem', fontWeight: 700, color: '#1c2433' }}>{student.nombre}</p>
+                          <p style={{ margin: 0, fontSize: '0.75rem', color: '#687182' }}>{student.carrera} · {student.cargo ?? 'Estudiante'}</p>
+                          <p style={{ margin: 0, fontSize: '0.72rem', color: '#9aa3b5' }}>{student.carnet}</p>
+                        </div>
+                        <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                          <button
+                            type="button"
+                            title="Editar estudiante"
+                            onClick={() => setStudentToEdit(student)}
+                            style={{ padding: '6px 8px', borderRadius: '8px', border: '1px solid #d0d9f0', background: 'white', cursor: 'pointer', color: '#3972f0', display: 'flex', alignItems: 'center' }}
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            title="Eliminar inscripción"
+                            onClick={() => void handleRemoveStudent(student.id)}
+                            disabled={removingId === student.id}
+                            style={{ padding: '6px 8px', borderRadius: '8px', border: '1px solid #fed7d7', background: 'white', cursor: 'pointer', color: '#e53e3e', display: 'flex', alignItems: 'center' }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Modal de edición de estudiante */}
+            {studentToEdit && (
+              <EditStudentModal
+                student={studentToEdit}
+                projectId={String(project.id)}
+                onClose={() => setStudentToEdit(null)}
+                onSaved={handleStudentSaved}
+                updateFn={updateStudentEnrollment}
+              />
+            )}
           </div>
 
           <div className="modal-footer">

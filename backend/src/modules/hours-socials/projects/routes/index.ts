@@ -444,4 +444,29 @@ router.get('/:id/enrollments', controller.listProjectEnrollments);
  */
 router.post('/:id/enrollments', validateRequiredFields(['nombre', 'carnet', 'carrera']), controller.enrollStudentInProject);
 
+/**
+ * @swagger
+ * /api/projects/{id}/enrollments/{enrollmentId}:
+ *   delete:
+ *     summary: Elimina la inscripción de un estudiante del proyecto
+ *     tags: [Projects]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: enrollmentId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Inscripción eliminada
+ *       404:
+ *         description: Inscripción no encontrada
+ */
+router.delete('/:id/enrollments/:enrollmentId', controller.removeEnrollment);
+
 export default router;

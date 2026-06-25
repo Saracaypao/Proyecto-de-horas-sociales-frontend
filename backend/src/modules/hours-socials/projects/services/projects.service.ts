@@ -769,6 +769,40 @@ class ProjectsService {
       projectsByStatus,
     };
   };
+
+  public removeEnrollment = async (projectId: string | number, enrollmentId: string) => {
+  const enrollment = await ProjectEnrollment.findOne({
+    where: { id: enrollmentId, project_id: projectId },
+  });
+  if (!enrollment) throw new HttpError(404, 'Enrollment not found');
+
+  const transaction = await sequelize.transaction();
+  try {
+    await enrollment.destroy({ transaction });
+
+    // Recalcular personas y team_members
+    const activeEnrollments = await ProjectEnrollment.findAll({
+      where: { project_id: projectId, activo: true },
+      include: [{ model: Student, as: 'student', required: true }],
+      transaction,
+    });
+    const activeNames = activeEnrollments
+      .map((e) => (e.get('student') as any)?.nombre)
+      .filter(Boolean)
+      .map(String);
+
+    await Project.update(
+      { personas: activeEnrollments.length, team_members: activeNames },
+      { where: { id: projectId }, transaction }
+    );
+
+    await transaction.commit();
+    return { deleted: true, enrollmentId };
+  } catch (err) {
+    await transaction.rollback();
+    throw err;
+  }
+};
 }
 
 export const projectsService = new ProjectsService();
