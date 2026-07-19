@@ -4647,3 +4647,12 @@ select.field-input:focus {
   border-color: #2f68ec;
   box-shadow: 0 0 0 3px rgba(47, 104, 236, 0.1);
 }
+
+/* Oculta el botón de autofill de contactos de Safari en inputs */
+input::-webkit-contacts-auto-fill-button {
+  visibility: hidden;
+  display: none !important;
+  pointer-events: none;
+  position: absolute;
+  right: 0;
+}
