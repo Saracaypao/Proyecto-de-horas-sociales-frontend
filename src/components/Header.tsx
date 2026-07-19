@@ -28,7 +28,7 @@ export default function Header({ activePage }: { activePage: string }) {
         <div className="brand-mark">
           <MapPinned size={20} strokeWidth={2.5} />
         </div>
-        <span>El Salvador EduMap</span>
+        <span>CSS Web</span>
       </div>
 
       {/* Nav desktop */}
